@@ -1,0 +1,2227 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>AMBIGUOUS MATCH - 스마트 농구 팀 밸런서</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Noto Sans KR"', 'sans-serif'],
+            display: ['"Chakra Petch"', '"Noto Sans KR"', 'sans-serif'],
+          },
+          colors: {
+            court: { orange: '#F97316', orangeDark: '#EA580C', navy: '#0F172A', slate: '#1E293B' }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.4); border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(249, 115, 22, 0.7); }
+    .court-pattern { background-image: radial-gradient(rgba(249, 115, 22, 0.12) 1px, transparent 1px); background-size: 16px 16px; }
+    
+    html.dark,
+    html.dark body {
+      background-color: #000000 !important;
+      background-image: none !important;
+    }
+    html.dark header {
+      background-color: #000000 !important;
+      border-bottom-color: #262626 !important;
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body { max-width: 100vw; overflow-x: hidden; }
+
+    @keyframes slideIn { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+    .toast-enter { animation: slideIn 0.3s ease-out forwards; }
+    .toast-exit { animation: fadeOut 0.3s ease-out forwards; }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 dark:bg-black dark:text-slate-100 min-h-screen transition-colors duration-200 court-pattern pb-24">
+
+  <!-- 상단 헤더 -->
+  <header style="background-color: #1A281F;" class="sticky top-0 z-30 backdrop-blur-md text-white border-b border-[#2b3f32] dark:border-neutral-800 shadow-lg">
+    <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2.5 min-h-[3.8rem] flex items-center justify-between gap-2">
+      <div class="flex items-center gap-2.5 min-w-0">
+        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 flex shrink-0 items-center justify-center shadow-md shadow-orange-500/30">
+          <svg class="w-4.5 h-4.5 sm:w-6 sm:h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/><path d="M2.5 12h19"/><path d="M12 2.5v19"/><path d="M5.2 5.2c3.8 3.8 3.8 9.8 0 13.6"/><path d="M18.8 5.2c-3.8 3.8-3.8 9.8 0 13.6"/>
+          </svg>
+        </div>
+        <div class="min-w-0">
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <h1 class="font-display text-sm sm:text-xl font-bold tracking-wider text-white truncate">AMBIGUOUS MATCH</h1>
+          </div>
+          <p class="text-[9px] sm:text-xs text-slate-300 font-medium tracking-tight truncate">
+            애매모호한 사람들의 농구 모임 🤷‍♂️
+          </p>
+          <p class="text-[9px] sm:text-xs text-orange-400 font-bold tracking-tight">
+            ※ 입단 조건 : 슈팅 성공률 30% 미만
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-1.5 shrink-0">
+        <div id="modeStatusBadge" class="flex items-center gap-1 bg-black/30 dark:bg-black px-2.5 py-1 rounded-xl border border-white/15 dark:border-neutral-800">
+          <span id="modeStatusDot" class="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-slate-400"></span>
+          <span id="modeStatusText" class="text-[11px] sm:text-xs font-bold text-slate-200">멤버</span>
+        </div>
+
+        <div id="authButtonsGroup" class="flex items-center gap-1">
+          <button id="authLoginBtn" type="button" onclick="openAuthModal()"
+            class="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-[11px] sm:text-xs font-extrabold transition shadow-sm">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.3" viewBox="0 0 24 24">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+            <span>로그인</span>
+          </button>
+          <button id="authLogoutBtn" type="button" onclick="logout()"
+            class="hidden flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-black/30 dark:bg-black hover:bg-black/50 dark:hover:bg-neutral-900 text-slate-200 hover:text-white text-[11px] sm:text-xs font-bold border border-white/15 dark:border-neutral-800 transition">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+            <span>로그아웃</span>
+          </button>
+        </div>
+
+        <button id="themeToggleBtn" type="button" onclick="toggleTheme()" class="p-1.5 sm:p-2 rounded-xl bg-black/30 dark:bg-black hover:bg-black/50 dark:hover:bg-neutral-900 text-slate-200 border border-white/15 dark:border-neutral-800 transition">
+          <svg id="sunIcon" class="w-4 h-4 sm:w-5 sm:h-5 hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="5"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+          </svg>
+          <svg id="moonIcon" class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
+    <!-- 내비게이션 탭 -->
+    <div class="flex items-center gap-1 overflow-x-auto mb-4 sm:mb-6 bg-white dark:bg-black p-1.5 rounded-2xl border border-slate-200 dark:border-neutral-800 shadow-sm">
+      <button type="button" onclick="switchTab('teams')" id="tabBtn-teams" class="nav-tab-btn flex-1 px-3 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-extrabold bg-orange-500 text-white transition flex items-center justify-center gap-1.5 whitespace-nowrap">
+        팀 편성 결과
+      </button>
+      <button type="button" onclick="switchTab('roster')" id="tabBtn-roster" class="nav-tab-btn flex-1 px-3 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-neutral-900 transition flex items-center justify-center gap-1.5 whitespace-nowrap">
+        전체 선수 명단
+      </button>
+      <button type="button" onclick="switchTab('attendance')" id="tabBtn-attendance" class="nav-tab-btn flex-1 px-3 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-neutral-900 transition flex items-center justify-center gap-1.5 whitespace-nowrap">
+        출석 기록
+      </button>
+      <button type="button" onclick="switchTab('settings')" id="tabBtn-settings" class="nav-tab-btn hidden admin-only flex-1 px-3 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-neutral-900 transition flex items-center justify-center gap-1.5 whitespace-nowrap">
+        관리자 설정
+      </button>
+    </div>
+
+    <!-- TAB 1: 팀 편성 결과 -->
+    <div id="tab-teams" class="tab-content space-y-4 sm:space-y-5">
+      
+      <!-- 부관리자/관리자 전용: 컨트롤 패널 -->
+      <div class="sub-admin-only hidden bg-white dark:bg-black rounded-2xl shadow-sm border border-slate-200 dark:border-neutral-800 p-4 sm:p-5">
+        <div class="flex items-center justify-between gap-2 mb-3 sm:mb-4 flex-wrap">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-5 rounded-sm bg-orange-500"></span>
+            <h2 class="font-bold text-sm sm:text-base">팀 자동 편성 (부관리자/관리자 전용)</h2>
+          </div>
+          <span class="admin-only hidden text-[11px] font-bold text-orange-500 bg-orange-50 dark:bg-black dark:border dark:border-orange-500/40 px-2.5 py-0.5 rounded-lg">
+            티어(S·A·B·C) + 포지션 + 또래 자동 밸런싱 적용 중
+          </span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4">
+          <div>
+            <label class="block text-[11px] sm:text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5">1. 경기 인원 (최대 5명 제한)</label>
+            <div class="grid grid-cols-3 gap-1 bg-slate-100 dark:bg-black dark:border dark:border-neutral-800 p-1 rounded-xl">
+              <button type="button" onclick="setGameFormat(3)" id="cfg-fmt-3" class="cfg-btn py-1.5 rounded-lg text-xs font-bold transition text-slate-600 dark:text-slate-300">3v3</button>
+              <button type="button" onclick="setGameFormat(4)" id="cfg-fmt-4" class="cfg-btn py-1.5 rounded-lg text-xs font-bold transition text-slate-600 dark:text-slate-300">4v4</button>
+              <button type="button" onclick="setGameFormat(5)" id="cfg-fmt-5" class="cfg-btn py-1.5 rounded-lg text-xs font-bold transition bg-white dark:bg-neutral-900 shadow-sm text-orange-500">5v5</button>
+            </div>
+          </div>
+          <div>
+            <label class="block text-[11px] sm:text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5">2. 생성할 팀 수</label>
+            <div class="grid grid-cols-3 gap-1 bg-slate-100 dark:bg-black dark:border dark:border-neutral-800 p-1 rounded-xl">
+              <button type="button" onclick="setTeamCount(2)" id="cfg-tm-2" class="cfg-btn py-1.5 rounded-lg text-xs font-bold transition text-slate-600 dark:text-slate-300">2팀</button>
+              <button type="button" onclick="setTeamCount(3)" id="cfg-tm-3" class="cfg-btn py-1.5 rounded-lg text-xs font-bold transition text-slate-600 dark:text-slate-300">3팀</button>
+              <button type="button" onclick="setTeamCount(4)" id="cfg-tm-4" class="cfg-btn py-1.5 rounded-lg text-xs font-bold transition text-slate-600 dark:text-slate-300">4팀</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 flex-wrap pt-3 border-t border-slate-100 dark:border-neutral-800">
+          <button type="button" onclick="generateTeams()" class="flex-1 min-w-[140px] bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-extrabold py-2.5 sm:py-3 px-4 rounded-xl shadow-md text-xs sm:text-sm flex items-center justify-center gap-2 transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.3" viewBox="0 0 24 24">
+              <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            </svg>
+            <span>팀 자동 편성</span>
+          </button>
+          
+          <button type="button" onclick="clearAllGuests()" id="clearGuestsBtn" class="hidden bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 px-3 rounded-xl text-xs flex items-center gap-1 transition">
+            <span>게스트 정리</span>
+          </button>
+          <button type="button" onclick="setAllPlayersAbsent()" class="bg-rose-500 hover:bg-rose-600 text-white font-bold py-2.5 px-3 rounded-xl text-xs flex items-center gap-1 transition">
+            <span>모두 불참</span>
+          </button>
+          <button type="button" onclick="setAllPlayersPresent()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-3 rounded-xl text-xs flex items-center gap-1 transition">
+            <span>모두 참석</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 결과 툴바 -->
+      <div id="resultToolbar" class="flex items-center justify-between bg-white dark:bg-black px-4 py-3 rounded-2xl border border-slate-200 dark:border-neutral-800 shadow-sm hidden">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span class="text-xs font-bold text-slate-600 dark:text-slate-300">팀 편성 현황</span>
+          <span id="guestColorLegend" class="hidden text-[11px] font-bold text-amber-600 dark:text-amber-400">· 황금색 이름 = 게스트</span>
+        </div>
+        <button type="button" onclick="copyTeams()" class="bg-slate-100 dark:bg-black dark:border dark:border-neutral-800 hover:bg-slate-200 dark:hover:bg-neutral-900 text-slate-700 dark:text-slate-200 font-bold px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 transition shrink-0">
+          <svg class="w-3.5 h-3.5 text-orange-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+          </svg>
+          <span>카톡 공유 복사</span>
+        </button>
+      </div>
+
+      <!-- 팀 카드 그리드 -->
+      <div id="teamsDashboard" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
+
+      <!-- 벤치 / 대기 명단 섹션 -->
+      <div id="benchSection" onclick="moveSelectedTeamPlayerToBench()" class="bg-white dark:bg-black rounded-2xl shadow-sm border border-slate-200 dark:border-neutral-800 p-4 hidden transition">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+            <h3 class="font-bold text-sm">🪑 대기 명단 (벤치)</h3>
+          </div>
+          <span id="benchCount" class="text-xs font-bold text-amber-500 bg-amber-50 dark:bg-black dark:border dark:border-amber-500/40 px-2 py-0.5 rounded-lg">0명</span>
+        </div>
+        <div id="benchList" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2"></div>
+      </div>
+
+      <!-- 불참 명단 섹션 -->
+      <div id="absentSection" class="bg-white dark:bg-black rounded-2xl shadow-sm border border-slate-200 dark:border-neutral-800 p-4 hidden">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+            <h3 class="font-bold text-sm text-rose-500">🔴 불참 명단</h3>
+          </div>
+          <span id="absentCount" class="text-xs font-bold text-rose-500 bg-rose-50 dark:bg-black dark:border dark:border-rose-500/40 px-2 py-0.5 rounded-lg">0명</span>
+        </div>
+        <div id="absentList" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2"></div>
+      </div>
+
+      <!-- 안내 상태 -->
+      <div id="emptyTeamState" class="bg-white dark:bg-black rounded-3xl p-12 text-center border border-slate-200 dark:border-neutral-800 shadow-sm">
+        <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-orange-50 dark:bg-black dark:border dark:border-orange-500/40 flex items-center justify-center text-orange-500">
+          <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+          </svg>
+        </div>
+        <h3 class="font-bold text-base sm:text-lg mb-1">편성된 팀이 없습니다</h3>
+        <p class="text-xs sm:text-sm text-slate-400 max-w-sm mx-auto mb-4">
+          부관리자 또는 관리자로 로그인하여 '팀 자동 편성' 버튼을 누르거나, 전체 선수 명단에서 참석 상태를 관리하세요!
+        </p>
+      </div>
+
+    </div>
+
+    <!-- TAB 2: 전체 선수 명단 -->
+    <div id="tab-roster" class="tab-content hidden grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      
+      <!-- 부관리자/관리자 전용: 선수 추가 패널 -->
+      <div id="playerInputFormPanel" class="lg:col-span-4 bg-white dark:bg-black rounded-2xl shadow-sm border border-slate-200 dark:border-neutral-800 p-4 sm:p-5 sub-admin-only hidden">
+        <div class="flex items-center justify-between mb-4 gap-1">
+          <div class="flex items-center gap-2 shrink-0">
+            <span class="w-2 h-5 rounded-sm bg-orange-500"></span>
+            <h2 class="font-bold text-sm sm:text-base">선수 등록</h2>
+          </div>
+          <div class="flex bg-slate-100 dark:bg-black dark:border dark:border-neutral-800 p-1 rounded-xl text-[11px] sm:text-xs">
+            <button type="button" onclick="switchInputMode('single')" id="inpMode-single" class="px-2 py-1 bg-orange-500 text-white rounded-lg font-bold transition">개별</button>
+            <button type="button" onclick="switchInputMode('guest')" id="inpMode-guest" class="px-2 py-1 text-slate-400 rounded-lg font-bold hover:bg-slate-200 dark:hover:bg-neutral-900 transition">게스트</button>
+            <button type="button" onclick="switchInputMode('bulk')" id="inpMode-bulk" class="px-2 py-1 text-slate-400 rounded-lg font-bold hover:bg-slate-200 dark:hover:bg-neutral-900 transition">일괄</button>
+          </div>
+        </div>
+
+        <!-- 개별 등록 폼 -->
+        <form id="singlePlayerForm" onsubmit="addSinglePlayer(event)" class="space-y-3">
+          <div>
+            <label class="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">이름</label>
+            <input type="text" id="addName" required placeholder="예: 홍길동" class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-black border border-slate-200 dark:border-neutral-800 text-xs sm:text-sm outline-none font-bold" />
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">포지션</label>
+              <select id="addPos" class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-black border border-slate-200 dark:border-neutral-800 text-xs sm:text-sm outline-none font-bold">
+                <option value="AM" selected>AM (애매모호)</option>
+                <option value="PG">PG (포인트가드)</option>
+                <option value="SG">SG (슈팅가드)</option>
+                <option value="SF">SF (스몰포워드)</option>
+                <option value="PF">PF (파워포워드)</option>
+                <option value="C">C (센터)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">또래 (2자리 숫자)</label>
+              <input type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="2" id="addAgeGroup" value="" placeholder="예: 95" class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-black border border-slate-200 dark:border-neutral-800 text-xs sm:text-sm outline-none font-bold text-center" />
+            </div>
+          </div>
+
+          <div class="admin-only hidden grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">티어</label>
+              <select id="addTier" class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-black border border-slate-200 dark:border-neutral-800 text-xs sm:text-sm outline-none font-bold text-orange-500">
+                <option value="S">S 티어 (4점)</option>
+                <option value="A">A 티어 (3점)</option>
+                <option value="B" selected>B 티어 (2점)</option>
+                <option value="C">C 티어 (1점)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">전화번호 (선택)</label>
+              <input type="tel" inputmode="numeric" id="addPhone" placeholder="01012345678" class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-black border border-slate-200 dark:border-neutral-800 text-xs outline-none" />
+            </div>
+          </div>
+
+          <button type="submit" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-extrabold py-2.5 rounded-xl text-xs sm:text-sm transition shadow-sm mt-2">
+            정식 멤버 추가하기
+          </button>
+        </form>
+
+        <!-- 일회성 게스트 간편 추가 폼 -->
+        <form id="guestPlayerForm" onsubmit="addGuestPlayer(event)" class="space-y-3 hidden">
+          <div class="px-3 py-2 rounded-xl bg-amber-50 dark:bg-black border border-amber-200 dark:border-amber-500/40 text-[11px] text-amber-700 dark:text-amber-400 font-medium leading-relaxed">
+            당일 경기만 참여하는 일회성 게스트를 추가합니다. 게스트는 이름이 <b>황금색</b>으로 표시되며, 경기 후 <b>'게스트 정리'</b> 버튼으로 일괄 삭제할 수 있습니다.
+          </div>
+
+          <div>
+            <label class="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">게스트 이름</label>
+            <input type="text" id="guestName" required placeholder="예: 김게스트 (또는 홍길동 지인)" class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-black border border-slate-200 dark:border-neutral-800 text-xs sm:text-sm outline-none font-bold text-amber-600 dark:text-amber-400" />
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">포지션</label>
+              <select id="guestPos" class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-black border border-slate-200 dark:border-neutral-800 text-xs sm:text-sm outline-none font-bold">
+                <option value="AM" selected>AM (애매모호)</option>
+                <option value="PG">PG (포인트가드)</option>
+                <option value="SG">SG (슈팅가드)</option>
+                <option value="SF">SF (스몰포워드)</option>
+                <option value="PF">PF (파워포워드)</option>
+                <option value="C">C (센터)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">또래 (선택)</label>
+              <input type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="2" id="guestAgeGroup" value="" placeholder="예: 95" class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-black border border-slate-200 dark:border-neutral-800 text-xs sm:text-sm outline-none font-bold text-center" />
+            </div>
+          </div>
+
+          <button type="submit" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-extrabold py-2.5 rounded-xl text-xs sm:text-sm transition shadow-sm mt-2">
+            당일 게스트 추가하기
+          </button>
+        </form>
+
+        <!-- 일괄 등록 폼 -->
+        <div id="bulkPlayerForm" class="space-y-3 hidden">
+          <div>
+            <label class="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">일괄 텍스트 입력</label>
+            <p class="text-[10px] text-slate-400 mb-2">형식: 이름 또래 포지션 (예: 홍길동 95 AM)</p>
+            <textarea id="bulkTextarea" rows="6" placeholder="홍길동 95 AM&#10;김철수 96 PG&#10;이영희 94 SF" class="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-black border border-slate-200 dark:border-neutral-800 text-xs outline-none font-mono"></textarea>
+          </div>
+          <button type="button" onclick="addBulkPlayers()" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-extrabold py-2.5 rounded-xl text-xs sm:text-sm transition shadow-sm">
+            일괄 등록하기
+          </button>
+        </div>
+      </div>
+
+      <!-- 명단 리스트 컬럼 -->
+      <div id="rosterListColumn" class="lg:col-span-12 bg-white dark:bg-black rounded-2xl shadow-sm border border-slate-200 dark:border-neutral-800 overflow-hidden">
+        <div class="px-4 py-3 bg-slate-50 dark:bg-black border-b dark:border-neutral-800 flex items-center justify-between gap-2 flex-wrap">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-bold text-slate-600 dark:text-slate-300">전체 명단 및 참석 여부</span>
+            <span id="rosterGuestHint" class="hidden text-[11px] font-bold text-amber-600 dark:text-amber-400">(황금색 = 게스트)</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="clearAllGuests()" id="rosterClearGuestsBtn" class="sub-admin-only hidden px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-bold text-[11px] transition">
+              게스트 정리
+            </button>
+            <span id="rosterTotalCount" class="text-xs font-bold text-orange-500"></span>
+          </div>
+        </div>
+        <div class="overflow-x-auto min-h-[250px]">
+          <table class="w-full text-left border-collapse whitespace-nowrap">
+            <thead>
+              <tr class="bg-slate-50 dark:bg-black border-b dark:border-neutral-800 text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                <th class="py-2.5 px-3 w-10 text-center">No</th>
+                <th class="py-2.5 px-2.5 w-14 text-center">포지션</th>
+                <th class="py-2.5 px-2 w-14 text-center">또래</th>
+                <th class="py-2.5 px-3">이름</th>
+                <th class="col-tier admin-only hidden py-2.5 px-2.5 text-center">티어</th>
+                <th class="col-phone admin-only hidden py-2.5 px-3">연락처</th>
+                <th class="py-2.5 px-3 text-center">참석 투표</th>
+              </tr>
+            </thead>
+            <tbody id="rosterTbody" class="divide-y divide-slate-100 dark:divide-neutral-800 text-xs sm:text-sm"></tbody>
+          </table>
+          <div id="emptyRosterState" class="py-16 text-center flex flex-col items-center opacity-60 hidden">
+            <p class="text-xs text-slate-400">등록된 선수가 없습니다.</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- TAB 3: 날짜별 출석 기록 (구글 시트 연동) -->
+    <div id="tab-attendance" class="tab-content hidden space-y-4 sm:space-y-5">
+      
+      <!-- 부관리자/관리자 전용: 날짜별 출석 저장 패널 -->
+      <div class="sub-admin-only hidden bg-white dark:bg-black rounded-2xl shadow-sm border border-slate-200 dark:border-neutral-800 p-4 sm:p-5">
+        <div class="flex items-center justify-between gap-2 mb-3 flex-wrap">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-5 rounded-sm bg-emerald-500"></span>
+            <h2 class="font-bold text-sm sm:text-base">날짜별 출석 저장 (구글 시트 연동)</h2>
+          </div>
+          <span class="text-[11px] text-slate-400">현재 선수 명단의 참석/불참 상태를 선택한 날짜로 기록합니다</span>
+        </div>
+
+        <div class="flex items-center gap-2 flex-wrap">
+          <input type="date" id="attendanceSaveDate" class="px-3 py-2 rounded-xl bg-slate-50 dark:bg-black border border-slate-200 dark:border-neutral-800 text-xs sm:text-sm font-bold outline-none" />
+          <button type="button" onclick="saveDailyAttendance()" id="saveAttendanceBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-4 py-2 rounded-xl text-xs sm:text-sm transition shadow-sm flex items-center gap-1.5">
+            <span>현재 명단 출석 저장</span>
+          </button>
+          <button type="button" onclick="fetchAttendanceLogs(true)" class="bg-slate-100 dark:bg-black dark:border dark:border-neutral-800 hover:bg-slate-200 dark:hover:bg-neutral-900 text-slate-700 dark:text-slate-300 font-bold px-3 py-2 rounded-xl text-xs transition">
+            시트 새로고침
+          </button>
+        </div>
+      </div>
+
+      <!-- 연 / 월 / 일 조회 필터 및 결과 -->
+      <div class="bg-white dark:bg-black rounded-2xl shadow-sm border border-slate-200 dark:border-neutral-800 p-4 sm:p-5">
+        <div class="flex items-center justify-between gap-2 mb-4 flex-wrap">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-5 rounded-sm bg-orange-500"></span>
+            <h2 class="font-bold text-sm sm:text-base">연 / 월 / 일 출석부 조회</h2>
+          </div>
+          <span id="attendanceSavedAtBadge" class="text-[11px] text-slate-400"></span>
+        </div>
+
+        <!-- 연 / 월 / 일 선택 드롭다운 -->
+        <div class="grid grid-cols-3 gap-2 mb-4">
+          <div>
+            <label class="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">연도</label>
+            <select id="attFilterYear" onchange="onAttYearChange()" class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-black border border-slate-200 dark:border-neutral-800 text-xs sm:text-sm font-bold outline-none"></select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">월</label>
+            <select id="attFilterMonth" onchange="onAttMonthChange()" class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-black border border-slate-200 dark:border-neutral-800 text-xs sm:text-sm font-bold outline-none"></select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">일</label>
+            <select id="attFilterDay" onchange="renderAttendanceView()" class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-black border border-slate-200 dark:border-neutral-800 text-xs sm:text-sm font-bold outline-none"></select>
+          </div>
+        </div>
+
+        <!-- 선택 날짜 요약 배너 -->
+        <div id="attSummaryBar" class="grid grid-cols-3 gap-2 mb-4 hidden">
+          <div class="p-3 rounded-xl bg-slate-50 dark:bg-black border border-slate-200 dark:border-neutral-800 text-center">
+            <div class="text-[11px] font-bold text-slate-400">전체 기록</div>
+            <div id="attSumTotal" class="text-sm sm:text-base font-extrabold text-slate-800 dark:text-white mt-0.5">0명</div>
+          </div>
+          <div class="p-3 rounded-xl bg-emerald-50/70 dark:bg-black border border-emerald-200 dark:border-emerald-500/40 text-center">
+            <div class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">🟢 참석</div>
+            <div id="attSumPresent" class="text-sm sm:text-base font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5">0명</div>
+          </div>
+          <div class="p-3 rounded-xl bg-rose-50/70 dark:bg-black border border-rose-200 dark:border-rose-500/40 text-center">
+            <div class="text-[11px] font-bold text-rose-500">🔴 불참</div>
+            <div id="attSumAbsent" class="text-sm sm:text-base font-extrabold text-rose-500 mt-0.5">0명</div>
+          </div>
+        </div>
+
+        <!-- 참석 / 불참 명단 출력 -->
+        <div id="attDetailContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4 hidden">
+          <div class="rounded-2xl border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50/30 dark:bg-black p-3.5">
+            <h3 class="text-xs sm:text-sm font-extrabold text-emerald-600 dark:text-emerald-400 mb-2.5 flex items-center justify-between">
+              <span>🟢 참석 명단</span>
+              <span id="attPresentListCount" class="text-xs">0명</span>
+            </h3>
+            <div id="attPresentList" class="flex flex-wrap gap-1.5"></div>
+          </div>
+
+          <div class="rounded-2xl border border-rose-200 dark:border-rose-500/30 bg-rose-50/30 dark:bg-black p-3.5">
+            <h3 class="text-xs sm:text-sm font-extrabold text-rose-500 mb-2.5 flex items-center justify-between">
+              <span>🔴 불참 명단</span>
+              <span id="attAbsentListCount" class="text-xs">0명</span>
+            </h3>
+            <div id="attAbsentList" class="flex flex-wrap gap-1.5"></div>
+          </div>
+        </div>
+
+        <div id="emptyAttendanceState" class="py-14 text-center">
+          <p class="text-xs sm:text-sm text-slate-400">저장된 출석 기록이 없습니다. 날짜를 선택하고 출석을 저장해보세요.</p>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- TAB 4: 관리자 설정 -->
+    <div id="tab-settings" class="tab-content hidden space-y-5">
+      <div class="bg-white dark:bg-black rounded-2xl shadow-sm border border-slate-200 dark:border-neutral-800 p-4 sm:p-6">
+        <div class="flex items-center gap-2 mb-4">
+          <span class="w-2 h-5 rounded-sm bg-orange-500"></span>
+          <h2 class="font-bold text-sm sm:text-base">선수 명단 및 데이터 관리</h2>
+        </div>
+        <p class="text-xs text-slate-400 mb-4">관리자 권한으로 등록된 모든 선수의 티어를 수정하거나 삭제할 수 있습니다. (티어 점수: S=4, A=3, B=2, C=1)</p>
+
+        <div id="adminPlayerManageList" class="space-y-2 mb-6 max-h-[380px] overflow-y-auto pr-1"></div>
+
+        <div class="pt-4 border-t border-slate-100 dark:border-neutral-800 flex items-center justify-between flex-wrap gap-2">
+          <button type="button" onclick="resetAllData()" class="px-4 py-2 rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs transition">
+            전체 데이터 초기화
+          </button>
+          <span class="text-xs text-slate-400">AMBIGUOUS MATCH v5.2</span>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- 로그인 모달 -->
+  <div id="authModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-300">
+    <div id="authModalContent" class="bg-white dark:bg-black rounded-3xl max-w-xs w-full p-6 shadow-2xl border border-slate-200 dark:border-neutral-800 transform scale-95 transition-transform duration-300">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="font-display font-bold text-base">관리자 권한 인증</h3>
+        <button type="button" onclick="closeAuthModal()" class="p-1 rounded-xl hover:bg-slate-100 dark:hover:bg-neutral-900 text-slate-400">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div class="grid grid-cols-2 gap-1 bg-slate-100 dark:bg-black dark:border dark:border-neutral-800 p-1 rounded-xl mb-4">
+        <button type="button" onclick="setLoginRole('SUB_ADMIN')" id="authRoleBtn-sub" class="py-2 rounded-lg text-[11px] sm:text-xs font-bold transition bg-orange-500 text-white shadow-sm">부관리자</button>
+        <button type="button" onclick="setLoginRole('ADMIN')" id="authRoleBtn-admin" class="py-2 rounded-lg text-[11px] sm:text-xs font-bold transition text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-neutral-900">관리자</button>
+      </div>
+
+      <form onsubmit="handleLogin(event)" class="space-y-3">
+        <div>
+          <label class="block text-[11px] font-bold text-slate-400 mb-1">비밀번호 입력</label>
+          <input type="password" id="authPwd" inputmode="numeric" pattern="[0-9]*" autocomplete="off" required placeholder="비밀번호" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-black border border-slate-200 dark:border-neutral-800 text-sm font-bold outline-none text-center tracking-widest" />
+        </div>
+        <button type="submit" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-extrabold py-2.5 rounded-xl text-xs sm:text-sm transition shadow-sm">
+          로그인 확인
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- 커스텀 확인 모달 -->
+  <div id="confirmModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-200">
+    <div id="confirmModalContent" class="bg-white dark:bg-black rounded-3xl max-w-xs w-full p-5 shadow-2xl border border-slate-200 dark:border-neutral-800 transform scale-95 transition-transform duration-200">
+      <h3 class="font-bold text-sm sm:text-base mb-2 text-slate-800 dark:text-white">확인</h3>
+      <p id="confirmModalMsg" class="text-xs sm:text-sm text-slate-500 dark:text-slate-300 mb-5 leading-relaxed"></p>
+      <div class="flex items-center gap-2">
+        <button type="button" onclick="closeConfirmModal(false)" class="flex-1 py-2 rounded-xl bg-slate-100 dark:bg-black dark:border dark:border-neutral-800 hover:bg-slate-200 dark:hover:bg-neutral-900 text-slate-600 dark:text-slate-300 font-bold text-xs transition">취소</button>
+        <button type="button" onclick="closeConfirmModal(true)" class="flex-1 py-2 rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs transition">확인</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 토스트 컨테이너 -->
+  <div id="toastContainer" class="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- 자바스크립트 로직 -->
+  <script>
+    const isGasEnv = (typeof google !== 'undefined' && google.script && google.script.run);
+
+    let players = [];
+    let generatedTeams = [];
+    let benchPlayers = [];
+    let absentPlayers = [];
+    let attendanceLogs = [];
+    let isInitialized = false;
+    let currentRole = 'MEMBER';
+    let loginTargetRole = 'SUB_ADMIN';
+    let selectedPlayerForMove = null;
+    let confirmCallback = null;
+
+    let isSaving = false;
+    let lastSaveTimestamp = 0;
+    let lastAppliedSnapshot = '';
+
+    const config = {
+      format: 5,
+      teams: 3
+    };
+
+    const POS = {
+      PG: { label: 'PG', w: 1, color: 'bg-emerald-100 text-emerald-700 dark:bg-black dark:border dark:border-emerald-500/40 dark:text-emerald-400' },
+      SG: { label: 'SG', w: 2, color: 'bg-blue-100 text-blue-700 dark:bg-black dark:border dark:border-blue-500/40 dark:text-blue-400' },
+      SF: { label: 'SF', w: 3, color: 'bg-indigo-100 text-indigo-700 dark:bg-black dark:border dark:border-indigo-500/40 dark:text-indigo-400' },
+      PF: { label: 'PF', w: 4, color: 'bg-amber-100 text-amber-700 dark:bg-black dark:border dark:border-amber-500/40 dark:text-amber-400' },
+      C:  { label: 'C',  w: 5, color: 'bg-rose-100 text-rose-700 dark:bg-black dark:border dark:border-rose-500/40 dark:text-rose-400' },
+      AM: { label: 'AM', w: 3, color: 'bg-purple-100 text-purple-700 dark:bg-black dark:border dark:border-purple-500/40 dark:text-purple-400' }
+    };
+
+    const TIER_WEIGHT = { S: 4, A: 3, B: 2, C: 1 };
+
+    const TIER_STYLES = {
+      S: 'bg-rose-100 text-rose-700 border-rose-200 dark:bg-black dark:text-rose-400 dark:border-rose-500/50',
+      A: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-black dark:text-amber-400 dark:border-amber-500/50',
+      B: 'bg-sky-100 text-sky-700 border-sky-200 dark:bg-black dark:text-sky-400 dark:border-sky-500/50',
+      C: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-black dark:text-emerald-400 dark:border-emerald-500/50'
+    };
+
+    const TEAM_STYLES = [
+      { name: 'TEAM A', bg: 'from-orange-500 to-amber-600' },
+      { name: 'TEAM B', bg: 'from-blue-600 to-indigo-600' },
+      { name: 'TEAM C', bg: 'from-emerald-600 to-teal-600' },
+      { name: 'TEAM D', bg: 'from-purple-600 to-pink-600' }
+    ];
+
+    function getTodayDateString() {
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, '0');
+      const d = String(now.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
+    window.onload = () => {
+      loadFromLocal();
+      normalizeState();
+
+      const saveDateInput = document.getElementById('attendanceSaveDate');
+      if (saveDateInput) saveDateInput.value = getTodayDateString();
+
+      initAttendanceFilterOptions();
+      switchTab('roster');
+      renderAllUI();
+
+      if (isGasEnv) {
+        syncFromSheet(true);
+        fetchAttendanceLogs(false);
+        setInterval(() => {
+          if (document.visibilityState === 'visible') {
+            syncFromSheet(false);
+          }
+        }, 5000);
+      } else if (!isInitialized) {
+        isInitialized = true;
+        saveState();
+        renderAllUI();
+      }
+    };
+
+    function normalizeState() {
+      const playerMap = new Map();
+      players = (Array.isArray(players) ? players : []).map(p => {
+        const normalized = {
+          id: String(p.id || ('p_' + Date.now() + Math.random().toString(16).slice(2, 6))),
+          name: String(p.name || '이름없음').trim(),
+          ageGroup: String(p.ageGroup || '95'),
+          height: Number(p.height) || 0,
+          weight: Number(p.weight) || 0,
+          pos: POS[p.pos] ? p.pos : 'AM',
+          tier: TIER_STYLES[p.tier] ? p.tier : 'B',
+          phone: String(p.phone || ''),
+          attendance: p.attendance === 'absent' ? 'absent' : 'present',
+          isGuest: Boolean(p.isGuest)
+        };
+        playerMap.set(normalized.id, normalized);
+        return normalized;
+      });
+
+      const syncPlayerList = (list) => {
+        if (!Array.isArray(list)) return [];
+        const seen = new Set();
+        const result = [];
+        for (const item of list) {
+          if (!item || !item.id || seen.has(item.id)) continue;
+          const master = playerMap.get(item.id);
+          if (master) {
+            seen.add(item.id);
+            result.push({ ...master });
+          }
+        }
+        return result;
+      };
+
+      generatedTeams = (Array.isArray(generatedTeams) ? generatedTeams : []).map(team => syncPlayerList(team));
+      benchPlayers = syncPlayerList(benchPlayers);
+      absentPlayers = syncPlayerList(absentPlayers);
+    }
+
+    function renderAllUI() {
+      renderConfigUI();
+      renderGuestButtonsUI();
+      renderRoster();
+      renderTeams();
+      renderAttendanceView();
+      applyRoleUI();
+    }
+
+    function renderGuestButtonsUI() {
+      const guestCount = players.filter(p => p.isGuest).length;
+      const btn1 = document.getElementById('clearGuestsBtn');
+      const btn2 = document.getElementById('rosterClearGuestsBtn');
+      const legend1 = document.getElementById('guestColorLegend');
+      const legend2 = document.getElementById('rosterGuestHint');
+
+      if (legend1) legend1.classList.toggle('hidden', guestCount === 0);
+      if (legend2) legend2.classList.toggle('hidden', guestCount === 0);
+
+      if (btn1) {
+        if (guestCount > 0 && isSubAdminRole()) {
+          btn1.classList.remove('hidden');
+          btn1.querySelector('span').textContent = `게스트 정리 (${guestCount})`;
+        } else {
+          btn1.classList.add('hidden');
+        }
+      }
+      if (btn2) {
+        if (guestCount > 0 && isSubAdminRole()) {
+          btn2.classList.remove('hidden');
+          btn2.textContent = `게스트 정리 (${guestCount})`;
+        } else {
+          btn2.classList.add('hidden');
+        }
+      }
+    }
+
+    function buildStateSnapshot() {
+      return JSON.stringify({
+        players,
+        config,
+        generatedTeams,
+        benchPlayers,
+        absentPlayers,
+        isInitialized
+      });
+    }
+
+    function applyStateObject(data) {
+      if (!data) return;
+      if (data.config) {
+        config.format = [3, 4, 5].includes(Number(data.config.format)) ? Number(data.config.format) : 5;
+        config.teams = [2, 3, 4].includes(Number(data.config.teams)) ? Number(data.config.teams) : 3;
+      }
+      players = Array.isArray(data.players) ? data.players : [];
+      generatedTeams = Array.isArray(data.generatedTeams) ? data.generatedTeams : [];
+      benchPlayers = Array.isArray(data.benchPlayers) ? data.benchPlayers : [];
+      absentPlayers = Array.isArray(data.absentPlayers) ? data.absentPlayers : [];
+      isInitialized = Boolean(data.isInitialized);
+
+      normalizeState();
+      lastAppliedSnapshot = buildStateSnapshot();
+      saveToLocal();
+      renderAllUI();
+    }
+
+    function isUserEditing() {
+      const active = document.activeElement;
+      if (active && ['INPUT', 'SELECT', 'TEXTAREA'].includes(active.tagName)) return true;
+      const authOpen = !document.getElementById('authModal').classList.contains('hidden');
+      const confirmOpen = !document.getElementById('confirmModal').classList.contains('hidden');
+      return authOpen || confirmOpen;
+    }
+
+    function syncFromSheet(isInitialLoad) {
+      if (!isGasEnv) return;
+      if (!isInitialLoad && (isSaving || isUserEditing() || (Date.now() - lastSaveTimestamp < 3500))) {
+        return;
+      }
+
+      google.script.run
+        .withSuccessHandler((res) => {
+          if (!res || !res.ok) return;
+          if (!isInitialLoad && (isSaving || (Date.now() - lastSaveTimestamp < 3500))) return;
+
+          if (!res.data) {
+            if (isInitialLoad) {
+              isInitialized = true;
+              saveState();
+              renderAllUI();
+            }
+            return;
+          }
+
+          const incomingStr = JSON.stringify({
+            players: Array.isArray(res.data.players) ? res.data.players : [],
+            config: {
+              format: (res.data.config && res.data.config.format) || 5,
+              teams: (res.data.config && res.data.config.teams) || 3
+            },
+            generatedTeams: Array.isArray(res.data.generatedTeams) ? res.data.generatedTeams : [],
+            benchPlayers: Array.isArray(res.data.benchPlayers) ? res.data.benchPlayers : [],
+            absentPlayers: Array.isArray(res.data.absentPlayers) ? res.data.absentPlayers : [],
+            isInitialized: Boolean(res.data.isInitialized)
+          });
+
+          if (incomingStr !== lastAppliedSnapshot) {
+            applyStateObject(res.data);
+          }
+        })
+        .withFailureHandler(() => {
+          if (isInitialLoad) {
+            showToast('구글 시트 데이터 불러오기에 실패했습니다.', 'error');
+          }
+        })
+        .loadAppData();
+    }
+
+    function saveToLocal() {
+      try {
+        localStorage.setItem('ambiguous_players', JSON.stringify(players));
+        localStorage.setItem('ambiguous_config', JSON.stringify(config));
+        localStorage.setItem('ambiguous_teams', JSON.stringify({ generatedTeams, benchPlayers, absentPlayers }));
+        localStorage.setItem('ambiguous_attendance_logs', JSON.stringify(attendanceLogs));
+        localStorage.setItem('ambiguous_initialized', isInitialized ? 'true' : 'false');
+      } catch (e) {}
+    }
+
+    function saveState() {
+      normalizeState();
+      isInitialized = true;
+      const snapshot = buildStateSnapshot();
+      lastAppliedSnapshot = snapshot;
+      saveToLocal();
+
+      if (isGasEnv) {
+        isSaving = true;
+        lastSaveTimestamp = Date.now();
+        google.script.run
+          .withSuccessHandler((res) => {
+            isSaving = false;
+            lastSaveTimestamp = Date.now();
+            if (!res || !res.ok) {
+              showToast('구글 시트 저장에 실패했습니다.', 'error');
+            }
+          })
+          .withFailureHandler(() => {
+            isSaving = false;
+            showToast('구글 시트 연결 오류가 발생했습니다.', 'error');
+          })
+          .saveAppData(snapshot);
+      }
+    }
+
+    function loadFromLocal() {
+      try {
+        const p = localStorage.getItem('ambiguous_players');
+        if (p) players = JSON.parse(p);
+        const c = localStorage.getItem('ambiguous_config');
+        if (c) Object.assign(config, JSON.parse(c));
+        const t = localStorage.getItem('ambiguous_teams');
+        if (t) {
+          const parsed = JSON.parse(t);
+          generatedTeams = parsed.generatedTeams || [];
+          benchPlayers = parsed.benchPlayers || [];
+          absentPlayers = parsed.absentPlayers || [];
+        }
+        const al = localStorage.getItem('ambiguous_attendance_logs');
+        if (al) attendanceLogs = JSON.parse(al);
+        isInitialized = localStorage.getItem('ambiguous_initialized') === 'true';
+        lastAppliedSnapshot = buildStateSnapshot();
+      } catch (e) {}
+    }
+
+    function openConfirmModal(msg, callback) {
+      confirmCallback = callback;
+      document.getElementById('confirmModalMsg').textContent = msg;
+      const m = document.getElementById('confirmModal');
+      const mc = document.getElementById('confirmModalContent');
+      m.classList.remove('hidden');
+      void m.offsetWidth;
+      m.classList.remove('opacity-0');
+      mc.classList.remove('scale-95');
+    }
+
+    function closeConfirmModal(result) {
+      const m = document.getElementById('confirmModal');
+      const mc = document.getElementById('confirmModalContent');
+      m.classList.add('opacity-0');
+      mc.classList.add('scale-95');
+      setTimeout(() => {
+        m.classList.add('hidden');
+        if (result && typeof confirmCallback === 'function') {
+          confirmCallback();
+        }
+        confirmCallback = null;
+      }, 200);
+    }
+
+    function showToast(msg, type='info') {
+      const container = document.getElementById('toastContainer');
+      if (!container) return;
+      const toast = document.createElement('div');
+      
+      let colors = 'bg-slate-900 dark:bg-black text-white border-slate-700 dark:border-neutral-700';
+      if(type==='success') colors = 'bg-emerald-600 text-white border-emerald-500';
+      else if(type==='error') colors = 'bg-rose-600 text-white border-rose-500';
+
+      toast.className = `px-4 py-2.5 rounded-xl border shadow-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 toast-enter ${colors} text-center`;
+      toast.innerHTML = msg;
+      
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.classList.replace('toast-enter', 'toast-exit');
+        setTimeout(() => toast.remove(), 300);
+      }, 2500);
+    }
+
+    function toggleTheme() {
+      const isDark = document.documentElement.classList.toggle('dark');
+      document.getElementById('sunIcon').classList.toggle('hidden', !isDark);
+      document.getElementById('moonIcon').classList.toggle('hidden', isDark);
+    }
+
+    function isAdminRole() { return currentRole === 'ADMIN'; }
+    function isSubAdminRole() { return currentRole === 'SUB_ADMIN' || currentRole === 'ADMIN'; }
+
+    function applyRoleUI() {
+      document.querySelectorAll('.admin-only').forEach(el => {
+        if(isAdminRole()) el.classList.remove('hidden');
+        else el.classList.add('hidden');
+      });
+      
+      document.querySelectorAll('.sub-admin-only').forEach(el => {
+        if(isSubAdminRole()) el.classList.remove('hidden');
+        else el.classList.add('hidden');
+      });
+
+      const dot = document.getElementById('modeStatusDot');
+      const text = document.getElementById('modeStatusText');
+      const loginBtn = document.getElementById('authLoginBtn');
+      const logoutBtn = document.getElementById('authLogoutBtn');
+
+      if (currentRole === 'ADMIN') {
+        text.textContent = '관리자'; text.className = 'text-[11px] sm:text-xs font-bold text-orange-400';
+        dot.className = 'w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.8)]';
+        loginBtn.classList.add('hidden'); logoutBtn.classList.remove('hidden');
+      } else if (currentRole === 'SUB_ADMIN') {
+        text.textContent = '부관리자'; text.className = 'text-[11px] sm:text-xs font-bold text-emerald-400';
+        dot.className = 'w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]';
+        loginBtn.classList.add('hidden'); logoutBtn.classList.remove('hidden');
+      } else {
+        text.textContent = '멤버'; text.className = 'text-[11px] sm:text-xs font-bold text-slate-200';
+        dot.className = 'w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-slate-400';
+        loginBtn.classList.remove('hidden'); logoutBtn.classList.add('hidden');
+        if (!document.getElementById('tab-settings').classList.contains('hidden')) {
+          switchTab('roster');
+        }
+      }
+
+      const formPanel = document.getElementById('playerInputFormPanel');
+      const listCol = document.getElementById('rosterListColumn');
+      if (isSubAdminRole()) {
+        formPanel.classList.remove('hidden');
+        listCol.className = 'lg:col-span-8 bg-white dark:bg-black rounded-2xl shadow-sm border border-slate-200 dark:border-neutral-800 overflow-hidden';
+      } else {
+        formPanel.classList.add('hidden');
+        listCol.className = 'lg:col-span-12 bg-white dark:bg-black rounded-2xl shadow-sm border border-slate-200 dark:border-neutral-800 overflow-hidden';
+      }
+
+      renderGuestButtonsUI();
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+      
+      document.querySelectorAll('.nav-tab-btn').forEach(el => {
+        el.className = el.className.replace('bg-orange-500 text-white', 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-neutral-900');
+      });
+      const activeBtn = document.getElementById(`tabBtn-${tabId}`);
+      if(activeBtn) {
+        activeBtn.className = activeBtn.className.replace('text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-neutral-900', 'bg-orange-500 text-white');
+      }
+
+      if (tabId === 'attendance' && isGasEnv && attendanceLogs.length === 0) {
+        fetchAttendanceLogs(false);
+      }
+    }
+
+    function switchInputMode(mode) {
+      const modes = [
+        { key: 'single', formId: 'singlePlayerForm', btnId: 'inpMode-single', activeCls: 'px-2 py-1 bg-orange-500 text-white rounded-lg font-bold transition' },
+        { key: 'guest',  formId: 'guestPlayerForm',  btnId: 'inpMode-guest',  activeCls: 'px-2 py-1 bg-amber-500 text-white rounded-lg font-bold transition' },
+        { key: 'bulk',   formId: 'bulkPlayerForm',   btnId: 'inpMode-bulk',   activeCls: 'px-2 py-1 bg-orange-500 text-white rounded-lg font-bold transition' }
+      ];
+      const inactiveCls = 'px-2 py-1 text-slate-400 rounded-lg font-bold hover:bg-slate-200 dark:hover:bg-neutral-900 transition';
+
+      modes.forEach(m => {
+        const formEl = document.getElementById(m.formId);
+        const btnEl = document.getElementById(m.btnId);
+        if (!formEl || !btnEl) return;
+        if (m.key === mode) {
+          formEl.classList.remove('hidden');
+          btnEl.className = m.activeCls;
+        } else {
+          formEl.classList.add('hidden');
+          btnEl.className = inactiveCls;
+        }
+      });
+    }
+
+    function setGameFormat(fmt) {
+      config.format = fmt;
+      saveState();
+      renderAllUI();
+    }
+
+    function setTeamCount(tm) {
+      config.teams = tm;
+      saveState();
+      renderAllUI();
+    }
+
+    function renderConfigUI() {
+      [3,4,5].forEach(v => {
+        const el = document.getElementById(`cfg-fmt-${v}`);
+        if(el) {
+          if(config.format == v) el.className = 'cfg-btn py-1.5 rounded-lg text-xs font-bold transition bg-white dark:bg-neutral-900 shadow-sm text-orange-500';
+          else el.className = 'cfg-btn py-1.5 rounded-lg text-xs font-bold transition text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-neutral-900';
+        }
+      });
+      [2,3,4].forEach(v => {
+        const el = document.getElementById(`cfg-tm-${v}`);
+        if(el) {
+          if(config.teams == v) el.className = 'cfg-btn py-1.5 rounded-lg text-xs font-bold transition bg-white dark:bg-neutral-900 shadow-sm text-orange-500';
+          else el.className = 'cfg-btn py-1.5 rounded-lg text-xs font-bold transition text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-neutral-900';
+        }
+      });
+    }
+
+    function openAuthModal() {
+      const m = document.getElementById('authModal');
+      const mc = document.getElementById('authModalContent');
+      m.classList.remove('hidden');
+      const pwdInput = document.getElementById('authPwd');
+      pwdInput.value = '';
+      void m.offsetWidth;
+      m.classList.remove('opacity-0');
+      mc.classList.remove('scale-95');
+      setLoginRole('SUB_ADMIN');
+      setTimeout(() => pwdInput.focus(), 100);
+    }
+
+    function closeAuthModal() {
+      const m = document.getElementById('authModal');
+      const mc = document.getElementById('authModalContent');
+      m.classList.add('opacity-0');
+      mc.classList.add('scale-95');
+      setTimeout(() => m.classList.add('hidden'), 300);
+    }
+
+    function setLoginRole(role) {
+      loginTargetRole = role;
+      const sub = document.getElementById('authRoleBtn-sub');
+      const adm = document.getElementById('authRoleBtn-admin');
+      if (role === 'SUB_ADMIN') {
+        sub.className = 'py-2 rounded-lg text-[11px] sm:text-xs font-bold transition bg-orange-500 text-white shadow-sm';
+        adm.className = 'py-2 rounded-lg text-[11px] sm:text-xs font-bold transition text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-neutral-900';
+      } else {
+        adm.className = 'py-2 rounded-lg text-[11px] sm:text-xs font-bold transition bg-orange-500 text-white shadow-sm';
+        sub.className = 'py-2 rounded-lg text-[11px] sm:text-xs font-bold transition text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-neutral-900';
+      }
+    }
+
+    function handleLogin(e) {
+      e.preventDefault();
+      const pwd = document.getElementById('authPwd').value;
+      if (loginTargetRole === 'SUB_ADMIN' && pwd === '6002') {
+        currentRole = 'SUB_ADMIN';
+        showToast('부관리자로 로그인되었습니다.', 'success');
+        closeAuthModal();
+        renderAllUI();
+      } else if (loginTargetRole === 'ADMIN' && pwd === '0902') {
+        currentRole = 'ADMIN';
+        showToast('관리자로 로그인되었습니다.', 'success');
+        closeAuthModal();
+        renderAllUI();
+      } else {
+        showToast('비밀번호가 일치하지 않습니다.', 'error');
+      }
+    }
+
+    function logout() {
+      currentRole = 'MEMBER';
+      selectedPlayerForMove = null;
+      showToast('로그아웃 되었습니다.');
+      renderAllUI();
+    }
+
+    function addSinglePlayer(e) {
+      e.preventDefault();
+      const rawName = document.getElementById('addName').value.trim();
+      if (!rawName) return;
+
+      const ageVal = document.getElementById('addAgeGroup').value.replace(/\D/g, '').trim();
+      const formattedAge = ageVal.length === 1 ? '0' + ageVal : (ageVal.slice(0, 2) || '95');
+
+      const p = {
+        id: 'p_' + Date.now(),
+        name: rawName,
+        ageGroup: formattedAge,
+        height: 0,
+        weight: 0,
+        pos: document.getElementById('addPos').value || 'AM',
+        tier: isAdminRole() ? (document.getElementById('addTier').value || 'B') : 'B',
+        phone: isAdminRole() ? (document.getElementById('addPhone').value.trim() || '') : '',
+        attendance: 'present',
+        isGuest: false
+      };
+      players.push(p);
+      if (generatedTeams.some(t => t.length > 0) || benchPlayers.length > 0 || absentPlayers.length > 0) {
+        benchPlayers.push(p);
+      }
+      saveState();
+      renderAllUI();
+      e.target.reset();
+      document.getElementById('addPos').value = 'AM';
+      document.getElementById('addAgeGroup').value = '';
+      document.getElementById('addName').focus();
+      showToast(`${p.name} 선수가 추가되었습니다.`, 'success');
+    }
+
+    function addGuestPlayer(e) {
+      e.preventDefault();
+      const nameInput = document.getElementById('guestName');
+      const rawName = nameInput.value.trim();
+      if (!rawName) return;
+
+      const ageVal = document.getElementById('guestAgeGroup').value.replace(/\D/g, '').trim();
+      const formattedAge = ageVal.length === 1 ? '0' + ageVal : (ageVal.slice(0, 2) || '95');
+
+      const guest = {
+        id: 'guest_' + Date.now() + Math.random().toString(16).slice(2, 5),
+        name: rawName,
+        ageGroup: formattedAge,
+        height: 0,
+        weight: 0,
+        pos: document.getElementById('guestPos').value || 'AM',
+        tier: 'B',
+        phone: '',
+        attendance: 'present',
+        isGuest: true
+      };
+
+      players.push(guest);
+      if (generatedTeams.some(t => t.length > 0) || benchPlayers.length > 0 || absentPlayers.length > 0) {
+        benchPlayers.push(guest);
+      }
+
+      saveState();
+      renderAllUI();
+      nameInput.value = '';
+      document.getElementById('guestPos').value = 'AM';
+      document.getElementById('guestAgeGroup').value = '';
+      nameInput.focus();
+      showToast(`${guest.name} 게스트가 당일 참석 인원으로 추가되었습니다.`, 'success');
+    }
+
+    function clearAllGuests() {
+      const guestIds = new Set(players.filter(p => p.isGuest).map(p => p.id));
+      if (guestIds.size === 0) {
+        showToast('정리할 게스트 인원이 없습니다.');
+        return;
+      }
+
+      openConfirmModal(`등록된 일회성 게스트 ${guestIds.size}명을 모두 명단에서 정리(삭제)하시겠습니까?`, () => {
+        players = players.filter(p => !guestIds.has(p.id));
+        benchPlayers = benchPlayers.filter(p => !guestIds.has(p.id));
+        absentPlayers = absentPlayers.filter(p => !guestIds.has(p.id));
+        generatedTeams.forEach(t => {
+          for (let i = t.length - 1; i >= 0; i--) {
+            if (guestIds.has(t[i].id)) t.splice(i, 1);
+          }
+        });
+        selectedPlayerForMove = null;
+        saveState();
+        renderAllUI();
+        showToast(`게스트 ${guestIds.size}명이 정리되었습니다.`, 'success');
+      });
+    }
+
+    function addBulkPlayers() {
+      const text = document.getElementById('bulkTextarea').value.trim();
+      if(!text) return;
+      const lines = text.split('\n');
+      let count = 0;
+      const validPositions = ['PG', 'SG', 'SF', 'PF', 'C', 'AM'];
+      const hasActiveBoard = generatedTeams.some(t => t.length > 0) || benchPlayers.length > 0 || absentPlayers.length > 0;
+
+      lines.forEach(line => {
+        const parts = line.trim().split(/\s+/);
+        if (parts.length >= 3) {
+          const rawAge = parts[1].replace(/\D/g, '');
+          const formattedAge = rawAge.length === 1 ? '0' + rawAge : (rawAge.slice(0, 2) || '95');
+          let newP = null;
+
+          if (validPositions.includes(parts[2].toUpperCase())) {
+            newP = {
+              id: 'p_' + Date.now() + Math.random().toString(16).slice(2,6),
+              name: parts[0],
+              ageGroup: formattedAge,
+              height: 0,
+              weight: 0,
+              pos: parts[2].toUpperCase(),
+              phone: parts[3] || '',
+              tier: 'B',
+              attendance: 'present',
+              isGuest: false
+            };
+          } else if (parts.length >= 5) {
+            newP = {
+              id: 'p_' + Date.now() + Math.random().toString(16).slice(2,6),
+              name: parts[0],
+              ageGroup: formattedAge,
+              height: parseInt(parts[2], 10) || 0,
+              weight: parseInt(parts[3], 10) || 0,
+              pos: validPositions.includes(parts[4].toUpperCase()) ? parts[4].toUpperCase() : 'AM',
+              phone: parts[5] || '',
+              tier: 'B',
+              attendance: 'present',
+              isGuest: false
+            };
+          }
+
+          if (newP) {
+            players.push(newP);
+            if (hasActiveBoard) benchPlayers.push(newP);
+            count++;
+          }
+        }
+      });
+      document.getElementById('bulkTextarea').value = '';
+      saveState();
+      renderAllUI();
+      showToast(`${count}명 일괄 등록 완료`, 'success');
+    }
+
+    function deletePlayer(id) {
+      openConfirmModal('정말 해당 선수를 명단에서 삭제하시겠습니까?', () => {
+        players = players.filter(p => p.id !== id);
+        benchPlayers = benchPlayers.filter(p => p.id !== id);
+        absentPlayers = absentPlayers.filter(p => p.id !== id);
+        generatedTeams.forEach(t => {
+          const idx = t.findIndex(p => p.id === id);
+          if(idx !== -1) t.splice(idx, 1);
+        });
+        selectedPlayerForMove = null;
+        saveState();
+        renderAllUI();
+        showToast('선수가 삭제되었습니다.', 'success');
+      });
+    }
+
+    function resetAllData() {
+      openConfirmModal('정말 모든 선수 데이터와 팀 기록을 초기화하시겠습니까?', () => {
+        players = [];
+        generatedTeams = [];
+        benchPlayers = [];
+        absentPlayers = [];
+        selectedPlayerForMove = null;
+        isInitialized = true;
+        saveState();
+        renderAllUI();
+        showToast('전체 데이터가 초기화되었습니다.', 'success');
+      });
+    }
+
+    function renderRoster() {
+      const tbody = document.getElementById('rosterTbody');
+      const emptyState = document.getElementById('emptyRosterState');
+      const totalCountSpan = document.getElementById('rosterTotalCount');
+      const guestCnt = players.filter(p => p.isGuest).length;
+      
+      if(totalCountSpan) {
+        totalCountSpan.textContent = guestCnt > 0 ? `총 ${players.length}명 (게스트 ${guestCnt}명)` : `총 ${players.length}명`;
+      }
+
+      if(players.length === 0) {
+        tbody.innerHTML = ''; emptyState.classList.remove('hidden');
+      } else {
+        emptyState.classList.add('hidden');
+        tbody.innerHTML = players.map((p, idx) => {
+          const posObj = POS[p.pos] || POS.AM;
+          const tierClass = TIER_STYLES[p.tier] || TIER_STYLES.B;
+          const guestTextColor = p.isGuest ? 'text-amber-600 dark:text-amber-400' : 'text-slate-800 dark:text-white';
+
+          let tierHtml = `<td class="col-tier py-2.5 px-2.5 text-center ${isAdminRole() ? '' : 'hidden'} admin-only">
+            <select onchange="updatePlayerField('${p.id}', 'tier', this.value)" class="text-[11px] font-extrabold px-2 py-0.5 rounded border outline-none ${tierClass}">
+              <option value="S" ${p.tier==='S'?'selected':''}>S</option>
+              <option value="A" ${p.tier==='A'?'selected':''}>A</option>
+              <option value="B" ${p.tier==='B'?'selected':''}>B</option>
+              <option value="C" ${p.tier==='C'?'selected':''}>C</option>
+            </select>
+          </td>`;
+
+          let phoneHtml = `<td class="col-phone py-2 px-3 ${isAdminRole() ? '' : 'hidden'} admin-only">
+            <input type="tel" inputmode="numeric" value="${p.phone || ''}" onchange="updatePlayerField('${p.id}', 'phone', this.value)" placeholder="01000000000" class="w-28 px-2 py-1 rounded bg-slate-100 dark:bg-black border border-slate-200 dark:border-neutral-800 text-xs outline-none" />
+          </td>`;
+
+          let namePosAgeHtml = '';
+          if(isSubAdminRole()) {
+            namePosAgeHtml = `
+              <td class="py-2.5 px-2.5 text-center">
+                <select onchange="updatePlayerField('${p.id}', 'pos', this.value)" class="text-[10px] font-bold px-1 py-0.5 rounded border border-slate-200 dark:border-neutral-800 bg-slate-50 dark:bg-black outline-none">
+                  <option value="AM" ${p.pos==='AM'?'selected':''}>AM</option>
+                  <option value="PG" ${p.pos==='PG'?'selected':''}>PG</option>
+                  <option value="SG" ${p.pos==='SG'?'selected':''}>SG</option>
+                  <option value="SF" ${p.pos==='SF'?'selected':''}>SF</option>
+                  <option value="PF" ${p.pos==='PF'?'selected':''}>PF</option>
+                  <option value="C" ${p.pos==='C'?'selected':''}>C</option>
+                </select>
+              </td>
+              <td class="py-2.5 px-2 text-center">
+                <input type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="2" value="${p.ageGroup || '95'}" onchange="updatePlayerField('${p.id}', 'ageGroup', this.value)" class="w-10 px-1 py-1 rounded bg-slate-100 dark:bg-black border border-slate-200 dark:border-neutral-800 text-xs text-center font-bold outline-none" />
+              </td>
+              <td class="py-2.5 px-3">
+                <div class="inline-flex items-center gap-1.5">
+                  <input type="text" value="${p.name}" onchange="updatePlayerField('${p.id}', 'name', this.value)" class="w-24 sm:w-28 px-2 py-1 rounded bg-slate-100 dark:bg-black border ${p.isGuest ? 'border-amber-400/60 dark:border-amber-500/50 text-amber-600 dark:text-amber-400' : 'border-slate-200 dark:border-neutral-800 text-slate-800 dark:text-white'} text-xs sm:text-sm font-bold outline-none" />
+                  ${p.isGuest ? `<button type="button" onclick="deletePlayer('${p.id}')" title="게스트 삭제" class="shrink-0 w-5 h-5 inline-flex items-center justify-center rounded bg-rose-500/15 text-rose-500 hover:bg-rose-500 hover:text-white text-[10px] font-extrabold transition">✕</button>` : ''}
+                </div>
+              </td>
+            `;
+          } else {
+            namePosAgeHtml = `
+              <td class="py-2.5 px-2.5 text-center"><span class="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${posObj.color}">${p.pos}</span></td>
+              <td class="py-2.5 px-2 text-center font-bold text-xs text-slate-500">${p.ageGroup || '95'}</td>
+              <td class="py-2.5 px-3 font-bold ${guestTextColor}">${p.name}</td>
+            `;
+          }
+
+          return `
+            <tr class="hover:bg-slate-50 dark:hover:bg-neutral-900/60 transition">
+              <td class="py-2.5 px-3 text-center text-xs font-medium text-slate-400">${idx+1}</td>
+              ${namePosAgeHtml}
+              ${tierHtml} ${phoneHtml}
+              <td class="py-2.5 px-3 text-center">
+                <select onchange="changeRosterAttendance('${p.id}', this.value)" class="text-[11px] font-bold px-2 py-1 rounded border border-slate-200 dark:border-neutral-800 bg-slate-50 dark:bg-black outline-none ${p.attendance==='absent'?'text-rose-500':'text-emerald-600'}">
+                  <option value="present" ${p.attendance==='present'?'selected':''}>🟢 참석</option>
+                  <option value="absent" ${p.attendance==='absent'?'selected':''}>🔴 불참</option>
+                </select>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      const adminList = document.getElementById('adminPlayerManageList');
+      if (adminList) {
+        if (players.length === 0) {
+          adminList.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">등록된 선수가 없습니다.</p>`;
+        } else {
+          adminList.innerHTML = players.map(p => {
+            const tierClass = TIER_STYLES[p.tier] || TIER_STYLES.B;
+            const guestNameCls = p.isGuest ? 'text-amber-600 dark:text-amber-400' : '';
+            return `
+              <div class="flex items-center justify-between px-3 py-2 bg-slate-50 dark:bg-black rounded-xl border border-slate-200 dark:border-neutral-800 text-xs gap-2 flex-wrap">
+                <div class="flex items-center gap-1.5 min-w-0">
+                  <span class="font-bold text-orange-500 shrink-0">[${p.pos}]</span>
+                  <span class="text-slate-400 font-bold shrink-0">${p.ageGroup || '95'}</span>
+                  <span class="font-bold truncate ${guestNameCls}">${p.name}</span>
+                  <span class="text-slate-500 ml-1 shrink-0">${p.phone || '연락처없음'}</span>
+                </div>
+                <div class="flex items-center gap-1.5 shrink-0">
+                  <select onchange="updatePlayerField('${p.id}', 'tier', this.value)" class="text-[11px] font-extrabold px-2 py-1 rounded border outline-none ${tierClass}">
+                    <option value="S" ${p.tier==='S'?'selected':''}>S 티어 (4점)</option>
+                    <option value="A" ${p.tier==='A'?'selected':''}>A 티어 (3점)</option>
+                    <option value="B" ${p.tier==='B'?'selected':''}>B 티어 (2점)</option>
+                    <option value="C" ${p.tier==='C'?'selected':''}>C 티어 (1점)</option>
+                  </select>
+                  <button type="button" onclick="deletePlayer('${p.id}')" class="px-2.5 py-1 rounded bg-rose-500 hover:bg-rose-600 text-white font-bold transition">삭제</button>
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
+      }
+    }
+
+    function updatePlayerField(id, field, val) {
+      const p = players.find(item => item.id === id);
+      if(p) {
+        if(field === 'height' || field === 'weight') {
+          p[field] = parseInt(val, 10) || 0;
+        } else if(field === 'ageGroup') {
+          const cleaned = val.replace(/\D/g, '');
+          p[field] = cleaned.length === 1 ? '0' + cleaned : (cleaned.slice(0, 2) || '95');
+        } else if(field === 'name') {
+          const trimmed = val.trim();
+          if (!trimmed) {
+            renderAllUI();
+            return;
+          }
+          p[field] = trimmed;
+        } else {
+          p[field] = val;
+        }
+
+        saveState();
+        renderAllUI();
+        showToast('선수 정보가 수정되었습니다.', 'success');
+      }
+    }
+
+    function changeRosterAttendance(id, newStatus) {
+      const p = players.find(item => item.id === id);
+      if(p) {
+        p.attendance = newStatus;
+        benchPlayers = benchPlayers.filter(bp => bp.id !== id);
+        absentPlayers = absentPlayers.filter(ap => ap.id !== id);
+        generatedTeams.forEach(t => {
+          const idx = t.findIndex(tp => tp.id === id);
+          if(idx !== -1) t.splice(idx, 1);
+        });
+
+        if(newStatus === 'absent') {
+          absentPlayers.push(p);
+        } else {
+          benchPlayers.push(p);
+        }
+        saveState();
+        renderAllUI();
+        showToast('참석 상태가 변경되었습니다.', 'success');
+      }
+    }
+
+    function getBirthYearVal(ageStr) {
+      const n = parseInt(String(ageStr || '95').replace(/\D/g, ''), 10);
+      if (isNaN(n)) return 1995;
+      return n <= 30 ? 2000 + n : 1900 + n;
+    }
+
+    function evaluateTeamsImbalance(teams) {
+      const numTeams = teams.length;
+      if (numTeams <= 1) return 0;
+
+      const tierSums = teams.map(t => t.reduce((sum, p) => sum + (TIER_WEIGHT[p.tier] || 2), 0));
+      const maxTier = Math.max(...tierSums);
+      const minTier = Math.min(...tierSums);
+      const tierMean = tierSums.reduce((a, b) => a + b, 0) / numTeams;
+      const tierVar = tierSums.reduce((acc, v) => acc + Math.pow(v - tierMean, 2), 0) / numTeams;
+
+      const topTierCounts = teams.map(t => t.filter(p => p.tier === 'S' || p.tier === 'A').length);
+      const topTierSpread = Math.max(...topTierCounts) - Math.min(...topTierCounts);
+
+      const posSums = teams.map(t => t.reduce((sum, p) => sum + (POS[p.pos] ? POS[p.pos].w : 3), 0));
+      const posSpread = Math.max(...posSums) - Math.min(...posSums);
+
+      let posDupPenalty = 0;
+      teams.forEach(t => {
+        const counts = {};
+        t.forEach(p => { counts[p.pos] = (counts[p.pos] || 0) + 1; });
+        Object.values(counts).forEach(c => {
+          if (c > 1) posDupPenalty += (c - 1) * (c - 1);
+        });
+      });
+
+      const ageAvgs = teams.map(t => {
+        if (t.length === 0) return 1995;
+        return t.reduce((sum, p) => sum + getBirthYearVal(p.ageGroup), 0) / t.length;
+      });
+      const ageSpread = Math.max(...ageAvgs) - Math.min(...ageAvgs);
+
+      return (maxTier - minTier) * 14 + tierVar * 10 + topTierSpread * 8 + posSpread * 3.5 + posDupPenalty * 4 + ageSpread * 1.5;
+    }
+
+    function generateTeams() {
+      const activePlayers = players.filter(p => p.attendance !== 'absent');
+      const totalSlots = config.format * config.teams;
+
+      if (activePlayers.length < totalSlots) {
+        showToast(`선택하신 ${config.format}v${config.format} (${config.teams}팀, 총 ${totalSlots}명) 인원이 충족되지 않아 팀을 편성할 수 없습니다. (현재 참석 인원: ${activePlayers.length}명)`, 'error');
+        return;
+      }
+
+      const posOrder = ['PG', 'SG', 'SF', 'PF', 'C', 'AM'];
+      const buckets = { PG: [], SG: [], SF: [], PF: [], C: [], AM: [] };
+
+      activePlayers.forEach(p => {
+        const key = buckets[p.pos] ? p.pos : 'AM';
+        buckets[key].push(p);
+      });
+
+      posOrder.forEach(pos => {
+        for (let i = buckets[pos].length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [buckets[pos][i], buckets[pos][j]] = [buckets[pos][j], buckets[pos][i]];
+        }
+      });
+
+      const balancedPool = [];
+      let remaining = activePlayers.length;
+      while (remaining > 0) {
+        for (const pos of posOrder) {
+          if (buckets[pos].length > 0) {
+            balancedPool.push(buckets[pos].shift());
+            remaining--;
+          }
+        }
+      }
+
+      const playingPlayers = balancedPool.slice(0, totalSlots);
+      benchPlayers = balancedPool.slice(totalSlots);
+      absentPlayers = players.filter(p => p.attendance === 'absent');
+
+      playingPlayers.sort((a, b) => {
+        const tDiff = (TIER_WEIGHT[b.tier] || 2) - (TIER_WEIGHT[a.tier] || 2);
+        if (tDiff !== 0) return tDiff;
+        const pDiff = (POS[b.pos] ? POS[b.pos].w : 3) - (POS[a.pos] ? POS[a.pos].w : 3);
+        if (pDiff !== 0) return pDiff;
+        return getBirthYearVal(a.ageGroup) - getBirthYearVal(b.ageGroup);
+      });
+
+      const teams = Array.from({ length: config.teams }, () => []);
+      let idx = 0;
+      let goingDown = true;
+
+      for (let i = 0; i < playingPlayers.length; i++) {
+        teams[idx].push(playingPlayers[i]);
+        if (goingDown) {
+          idx++;
+          if (idx >= config.teams) { idx = config.teams - 1; goingDown = false; }
+        } else {
+          idx--;
+          if (idx < 0) { idx = 0; goingDown = true; }
+        }
+      }
+
+      let currentScore = evaluateTeamsImbalance(teams);
+      let improved = true;
+      let iterations = 0;
+
+      while (improved && iterations < 80) {
+        improved = false;
+        iterations++;
+        let bestSwap = null;
+
+        for (let t1 = 0; t1 < teams.length; t1++) {
+          for (let t2 = t1 + 1; t2 < teams.length; t2++) {
+            for (let i = 0; i < teams[t1].length; i++) {
+              for (let j = 0; j < teams[t2].length; j++) {
+                const p1 = teams[t1][i];
+                const p2 = teams[t2][j];
+                teams[t1][i] = p2;
+                teams[t2][j] = p1;
+
+                const newScore = evaluateTeamsImbalance(teams);
+                if (newScore + 0.001 < currentScore) {
+                  currentScore = newScore;
+                  bestSwap = { t1, i, t2, j };
+                  improved = true;
+                }
+
+                teams[t1][i] = p1;
+                teams[t2][j] = p2;
+              }
+            }
+          }
+        }
+
+        if (bestSwap) {
+          const { t1, i, t2, j } = bestSwap;
+          const temp = teams[t1][i];
+          teams[t1][i] = teams[t2][j];
+          teams[t2][j] = temp;
+        }
+      }
+
+      teams.forEach(t => {
+        t.sort((a, b) => (POS[a.pos] ? POS[a.pos].w : 3) - (POS[b.pos] ? POS[b.pos].w : 3));
+      });
+
+      generatedTeams = teams;
+      selectedPlayerForMove = null;
+      saveState();
+      renderAllUI();
+      showToast('티어·포지션·또래 밸런싱 팀 편성이 완료되었습니다!', 'success');
+    }
+
+    function handleTeamMemberClick(tIdx, playerId) {
+      if (!isSubAdminRole()) return;
+      
+      if (!selectedPlayerForMove) {
+        selectedPlayerForMove = { source: 'TEAM', tIdx, playerId };
+        showToast('선수가 선택되었습니다. 교환할 다른 팀 선수, 벤치 선수 또는 이동할 영역을 터치하세요.');
+        renderAllUI();
+        return;
+      }
+
+      if (selectedPlayerForMove.source === 'TEAM' && selectedPlayerForMove.tIdx === tIdx && selectedPlayerForMove.playerId === playerId) {
+        selectedPlayerForMove = null;
+        showToast('선수 선택이 취소되었습니다.');
+        renderAllUI();
+        return;
+      }
+
+      if (selectedPlayerForMove.source === 'BENCH') {
+        const bIdx = benchPlayers.findIndex(p => p.id === selectedPlayerForMove.playerId);
+        const destTeam = generatedTeams[tIdx];
+        const destIdx = destTeam.findIndex(p => p.id === playerId);
+
+        if (bIdx !== -1 && destIdx !== -1) {
+          const fromBench = benchPlayers[bIdx];
+          const fromTeam = destTeam[destIdx];
+          destTeam[destIdx] = fromBench;
+          benchPlayers[bIdx] = fromTeam;
+          showToast(`${fromBench.name} ↔ ${fromTeam.name} 선수가 교환되었습니다.`, 'success');
+        }
+        selectedPlayerForMove = null;
+        saveState();
+        renderAllUI();
+        return;
+      }
+
+      const srcTeam = generatedTeams[selectedPlayerForMove.tIdx];
+      const srcIdx = srcTeam.findIndex(p => p.id === selectedPlayerForMove.playerId);
+      const destTeam = generatedTeams[tIdx];
+      const destIdx = destTeam.findIndex(p => p.id === playerId);
+
+      if (srcIdx !== -1 && destIdx !== -1) {
+        const temp = srcTeam[srcIdx];
+        srcTeam[srcIdx] = destTeam[destIdx];
+        destTeam[destIdx] = temp;
+        showToast('선수가 서로 교환되었습니다.', 'success');
+      }
+      selectedPlayerForMove = null;
+      saveState();
+      renderAllUI();
+    }
+
+    function handleBenchMemberClick(playerId) {
+      if (!isSubAdminRole()) return;
+
+      if (!selectedPlayerForMove) {
+        selectedPlayerForMove = { source: 'BENCH', playerId };
+        showToast('대기 선수가 선택되었습니다. 교체할 A~D 팀 선수를 터치하세요.');
+        renderAllUI();
+        return;
+      }
+
+      if (selectedPlayerForMove.source === 'BENCH' && selectedPlayerForMove.playerId === playerId) {
+        selectedPlayerForMove = null;
+        showToast('선수 선택이 취소되었습니다.');
+        renderAllUI();
+        return;
+      }
+
+      if (selectedPlayerForMove.source === 'BENCH') {
+        selectedPlayerForMove = { source: 'BENCH', playerId };
+        showToast('교체할 대기 선수가 변경되었습니다.');
+        renderAllUI();
+        return;
+      }
+
+      if (selectedPlayerForMove.source === 'TEAM') {
+        const srcTeam = generatedTeams[selectedPlayerForMove.tIdx];
+        const srcIdx = srcTeam.findIndex(p => p.id === selectedPlayerForMove.playerId);
+        const bIdx = benchPlayers.findIndex(p => p.id === playerId);
+
+        if (srcIdx !== -1 && bIdx !== -1) {
+          const fromTeam = srcTeam[srcIdx];
+          const fromBench = benchPlayers[bIdx];
+          srcTeam[srcIdx] = fromBench;
+          benchPlayers[bIdx] = fromTeam;
+          showToast(`${fromTeam.name} ↔ ${fromBench.name} 선수가 교환되었습니다.`, 'success');
+        }
+        selectedPlayerForMove = null;
+        saveState();
+        renderAllUI();
+      }
+    }
+
+    function moveSelectedTeamPlayerToBench() {
+      if (!isSubAdminRole() || !selectedPlayerForMove || selectedPlayerForMove.source !== 'TEAM') return;
+      const srcTeam = generatedTeams[selectedPlayerForMove.tIdx];
+      const srcIdx = srcTeam.findIndex(p => p.id === selectedPlayerForMove.playerId);
+      if (srcIdx !== -1) {
+        const [movedPlayer] = srcTeam.splice(srcIdx, 1);
+        benchPlayers.push(movedPlayer);
+        showToast(`${movedPlayer.name} 선수가 대기 명단으로 이동했습니다.`, 'success');
+      }
+      selectedPlayerForMove = null;
+      saveState();
+      renderAllUI();
+    }
+
+    function movePlayerToTeam(targetTIdx) {
+      if (!selectedPlayerForMove) return;
+
+      if (selectedPlayerForMove.source === 'TEAM' && selectedPlayerForMove.tIdx === targetTIdx) {
+        selectedPlayerForMove = null;
+        renderAllUI();
+        return;
+      }
+
+      const maxLimit = config.format;
+      if (generatedTeams[targetTIdx].length >= maxLimit) {
+        showToast(`현재 경기 설정(${maxLimit}v${maxLimit}) 기준 팀당 최대 ${maxLimit}명까지만 배정할 수 있습니다.`, 'error');
+        return;
+      }
+
+      if (selectedPlayerForMove.source === 'BENCH') {
+        const bIdx = benchPlayers.findIndex(p => p.id === selectedPlayerForMove.playerId);
+        if (bIdx !== -1) {
+          const [movedPlayer] = benchPlayers.splice(bIdx, 1);
+          generatedTeams[targetTIdx].push(movedPlayer);
+          showToast(`${movedPlayer.name} 선수가 ${TEAM_STYLES[targetTIdx % TEAM_STYLES.length].name}으로 이동했습니다.`, 'success');
+        }
+        selectedPlayerForMove = null;
+        saveState();
+        renderAllUI();
+        return;
+      }
+
+      const srcTeam = generatedTeams[selectedPlayerForMove.tIdx];
+      const srcIdx = srcTeam.findIndex(p => p.id === selectedPlayerForMove.playerId);
+      if (srcIdx !== -1) {
+        const [movedPlayer] = srcTeam.splice(srcIdx, 1);
+        generatedTeams[targetTIdx].push(movedPlayer);
+        showToast(`${movedPlayer.name} 선수가 팀을 이동했습니다.`, 'success');
+      }
+      selectedPlayerForMove = null;
+      saveState();
+      renderAllUI();
+    }
+
+    function moveBenchPlayerToTeam(benchIdx, targetTIdxStr) {
+      const targetTIdx = parseInt(targetTIdxStr, 10);
+      if (isNaN(targetTIdx) || !generatedTeams[targetTIdx]) return;
+
+      const maxLimit = config.format;
+      if (generatedTeams[targetTIdx].length >= maxLimit) {
+        showToast(`현재 경기 설정(${maxLimit}v${maxLimit}) 기준 팀당 최대 ${maxLimit}명까지만 배정할 수 있습니다.`, 'error');
+        return;
+      }
+      const [movedPlayer] = benchPlayers.splice(benchIdx, 1);
+      if (movedPlayer) {
+        movedPlayer.attendance = 'present';
+        const origP = players.find(p => p.id === movedPlayer.id);
+        if (origP) origP.attendance = 'present';
+
+        generatedTeams[targetTIdx].push(movedPlayer);
+        selectedPlayerForMove = null;
+        saveState();
+        renderAllUI();
+        showToast(`${movedPlayer.name} 선수가 ${TEAM_STYLES[targetTIdx % TEAM_STYLES.length].name}에 배치되었습니다!`, 'success');
+      }
+    }
+
+    function changeAttendance(teamIdx, playerId, newStatus) {
+      const pIdx = generatedTeams[teamIdx].findIndex(p => p.id === playerId);
+      if (pIdx === -1) return;
+      const targetPlayer = generatedTeams[teamIdx][pIdx];
+
+      targetPlayer.attendance = newStatus;
+      const origP = players.find(p => p.id === playerId);
+      if(origP) origP.attendance = newStatus;
+
+      generatedTeams[teamIdx].splice(pIdx, 1);
+
+      if (newStatus === 'absent') {
+        absentPlayers.push(targetPlayer);
+        showToast(`${targetPlayer.name} 선수가 불참 처리되어 불참 명단으로 이동했습니다.`, 'success');
+      } else {
+        benchPlayers.push(targetPlayer);
+        showToast(`${targetPlayer.name} 선수가 대기 명단으로 이동했습니다.`, 'success');
+      }
+      selectedPlayerForMove = null;
+      saveState();
+      renderAllUI();
+    }
+
+    function changeBenchAttendance(playerId, newStatus) {
+      const pIdx = benchPlayers.findIndex(p => p.id === playerId);
+      if (pIdx === -1) return;
+      const targetPlayer = benchPlayers[pIdx];
+
+      targetPlayer.attendance = newStatus;
+      const origP = players.find(p => p.id === playerId);
+      if(origP) origP.attendance = newStatus;
+
+      if (newStatus === 'absent') {
+        benchPlayers.splice(pIdx, 1);
+        absentPlayers.push(targetPlayer);
+        showToast(`${targetPlayer.name} 선수가 불참 명단으로 이동했습니다.`, 'success');
+      }
+      selectedPlayerForMove = null;
+      saveState();
+      renderAllUI();
+    }
+
+    function changeAbsentAttendance(playerId, newStatus) {
+      const pIdx = absentPlayers.findIndex(p => p.id === playerId);
+      if (pIdx === -1) return;
+      const targetPlayer = absentPlayers[pIdx];
+
+      targetPlayer.attendance = newStatus;
+      const origP = players.find(p => p.id === playerId);
+      if(origP) origP.attendance = newStatus;
+
+      if (newStatus === 'present') {
+        absentPlayers.splice(pIdx, 1);
+        benchPlayers.push(targetPlayer);
+        showToast(`${targetPlayer.name} 선수가 참석으로 변경되어 대기 명단으로 이동했습니다.`, 'success');
+      }
+      selectedPlayerForMove = null;
+      saveState();
+      renderAllUI();
+    }
+
+    function setAllPlayersAbsent() {
+      openConfirmModal('모든 선수를 일괄적으로 불참 상태로 변경하시겠습니까?', () => {
+        players.forEach(p => p.attendance = 'absent');
+        absentPlayers = JSON.parse(JSON.stringify(players));
+        benchPlayers = [];
+        generatedTeams = [];
+        selectedPlayerForMove = null;
+        saveState();
+        renderAllUI();
+        showToast('모든 선수가 불참 처리되었습니다.', 'success');
+      });
+    }
+
+    function setAllPlayersPresent() {
+      openConfirmModal('불참 명단에 있는 모든 선수를 참석으로 복구하시겠습니까?', () => {
+        players.forEach(p => p.attendance = 'present');
+        absentPlayers = [];
+        benchPlayers = JSON.parse(JSON.stringify(players));
+        generatedTeams = [];
+        selectedPlayerForMove = null;
+        saveState();
+        renderAllUI();
+        showToast('모든 선수가 참석(대기 명단)으로 복구되었습니다.', 'success');
+      });
+    }
+
+    function renderTeams() {
+      const db = document.getElementById('teamsDashboard');
+      const bSec = document.getElementById('benchSection');
+      const aSec = document.getElementById('absentSection');
+      const empty = document.getElementById('emptyTeamState');
+      const toolbar = document.getElementById('resultToolbar');
+      const maxLimit = config.format;
+      
+      const validTeams = generatedTeams.filter(t => t.length > 0);
+
+      if (validTeams.length === 0 && benchPlayers.length === 0 && absentPlayers.length === 0) {
+        db.innerHTML = ''; bSec.classList.add('hidden'); aSec.classList.add('hidden'); empty.classList.remove('hidden'); toolbar.classList.add('hidden');
+        return;
+      }
+      
+      empty.classList.add('hidden'); toolbar.classList.remove('hidden');
+
+      db.innerHTML = generatedTeams.map((t, tIdx) => {
+        const style = TEAM_STYLES[tIdx % TEAM_STYLES.length];
+        const isTargetTeamSelected = selectedPlayerForMove && (
+          selectedPlayerForMove.source === 'BENCH' ||
+          (selectedPlayerForMove.source === 'TEAM' && selectedPlayerForMove.tIdx !== tIdx)
+        );
+        const tierScoreSum = t.reduce((acc, p) => acc + (TIER_WEIGHT[p.tier] || 2), 0);
+        
+        return `
+          <div class="bg-white dark:bg-black rounded-2xl shadow-sm border ${isTargetTeamSelected ? 'border-orange-500 ring-2 ring-orange-500/35 cursor-pointer' : 'border-slate-200 dark:border-neutral-800'} flex flex-col overflow-hidden transition" ${isTargetTeamSelected ? `onclick="movePlayerToTeam(${tIdx})"` : ''}>
+            <div class="px-3.5 py-2.5 bg-gradient-to-r ${style.bg} text-white flex justify-between items-center gap-1">
+              <h3 class="font-display text-sm sm:text-base font-bold flex items-center gap-1.5">
+                <span>${style.name}</span>
+                <span class="text-[10px] bg-black/25 px-1.5 py-0.5 rounded-lg font-sans">${t.length}/${maxLimit}명</span>
+              </h3>
+              <span class="admin-only ${isAdminRole() ? '' : 'hidden'} text-[10px] font-extrabold bg-black/30 px-2 py-0.5 rounded-lg">티어합 ${tierScoreSum}점</span>
+            </div>
+            <div class="p-2.5 space-y-1.5 flex-1 bg-slate-50 dark:bg-black">
+              ${t.map(p => {
+                const isSelected = selectedPlayerForMove && selectedPlayerForMove.playerId === p.id;
+                const posObj = POS[p.pos] || POS.AM;
+                const tierClass = TIER_STYLES[p.tier] || TIER_STYLES.B;
+                const nameColorCls = p.isGuest ? 'text-amber-600 dark:text-amber-400' : 'text-slate-700 dark:text-slate-100';
+                return `
+                  <div onclick="event.stopPropagation(); handleTeamMemberClick(${tIdx}, '${p.id}')" class="flex items-center justify-between gap-2 px-3 py-2 bg-white dark:bg-black border ${isSelected ? 'border-orange-500 bg-orange-50/50 dark:bg-neutral-950 ring-1 ring-orange-500' : 'border-slate-100 dark:border-neutral-800'} rounded-xl shadow-sm cursor-pointer hover:border-orange-400 transition">
+                    <div class="flex items-center gap-1.5 min-w-0 flex-1">
+                      <span class="px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0 ${posObj.color}">${posObj.label}</span>
+                      <span class="text-[10px] font-bold text-slate-500 shrink-0">${p.ageGroup || '95'}</span>
+                      <span class="font-bold text-xs sm:text-sm ${nameColorCls} truncate">${p.name}</span>
+                      <span class="admin-only ${isAdminRole() ? '' : 'hidden'} px-1.5 py-0.2 rounded border text-[10px] font-extrabold shrink-0 ${tierClass}">${p.tier}</span>
+                    </div>
+                    <div class="flex items-center gap-1.5 shrink-0" onclick="event.stopPropagation()">
+                      ${isSubAdminRole() ? `
+                        <select onchange="changeAttendance(${tIdx}, '${p.id}', this.value)" class="text-[10px] bg-transparent dark:bg-black font-bold border border-slate-200 dark:border-neutral-800 rounded px-1.5 py-0.5 outline-none">
+                          <option value="present" ${p.attendance==='present'?'selected':''}>🟢 참석</option>
+                          <option value="absent" ${p.attendance==='absent'?'selected':''}>🔴 불참</option>
+                        </select>
+                      ` : ''}
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+              ${t.length === 0 ? `<div class="py-6 text-center text-xs text-slate-400 font-medium">선수가 없습니다. (터치하여 이동)</div>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      const isTeamPlayerSelected = selectedPlayerForMove && selectedPlayerForMove.source === 'TEAM';
+
+      if(benchPlayers.length > 0 || isTeamPlayerSelected) {
+        bSec.classList.remove('hidden');
+        bSec.className = `bg-white dark:bg-black rounded-2xl shadow-sm border ${isTeamPlayerSelected ? 'border-orange-500 ring-2 ring-orange-500/35 cursor-pointer' : 'border-slate-200 dark:border-neutral-800'} p-4 transition`;
+        document.getElementById('benchCount').textContent = `${benchPlayers.length}명`;
+        
+        if (benchPlayers.length === 0) {
+          document.getElementById('benchList').innerHTML = `<div class="col-span-full py-4 text-center text-xs text-orange-500 font-bold">여기를 터치하면 선택한 선수가 대기 명단으로 이동합니다.</div>`;
+        } else {
+          document.getElementById('benchList').innerHTML = benchPlayers.map((p, bIdx) => {
+            const isSelected = selectedPlayerForMove && selectedPlayerForMove.playerId === p.id;
+            const posObj = POS[p.pos] || POS.AM;
+            const nameColorCls = p.isGuest ? 'text-amber-600 dark:text-amber-400' : '';
+            return `
+              <div onclick="event.stopPropagation(); handleBenchMemberClick('${p.id}')" class="px-3 py-2 border ${isSelected ? 'border-orange-500 bg-orange-50/50 dark:bg-neutral-950 ring-1 ring-orange-500' : 'border-slate-200 dark:border-neutral-800 bg-slate-50 dark:bg-black'} rounded-xl flex justify-between items-center gap-2 text-xs cursor-pointer hover:border-orange-400 transition">
+                <div class="flex gap-1.5 items-center min-w-0 flex-1">
+                  <span class="px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0 ${posObj.color}">${posObj.label}</span>
+                  <span class="text-[10px] font-bold text-slate-400 shrink-0">${p.ageGroup || '95'}</span>
+                  <span class="font-bold truncate ${nameColorCls}">${p.name}</span>
+                </div>
+                <div class="flex items-center gap-1.5 shrink-0" onclick="event.stopPropagation()">
+                  ${isSubAdminRole() ? `
+                    <div class="flex items-center gap-1">
+                      <select onchange="changeBenchAttendance('${p.id}', this.value)" class="text-[10px] bg-transparent dark:bg-black font-bold border border-slate-200 dark:border-neutral-800 rounded px-1.5 py-0.5 outline-none text-rose-500">
+                        <option value="present" selected>🟢 참석</option>
+                        <option value="absent">🔴 불참</option>
+                      </select>
+                      <select onchange="moveBenchPlayerToTeam(${bIdx}, this.value); this.value='';" class="text-[10px] bg-orange-500 text-white font-bold rounded px-1.5 py-0.5 outline-none">
+                        <option value="" disabled selected>팀배치 ▾</option>
+                        ${generatedTeams.map((teamArr, ti) => {
+                          const isFull = teamArr.length >= maxLimit;
+                          return `<option value="${ti}" ${isFull ? 'disabled' : ''}>${TEAM_STYLES[ti % TEAM_STYLES.length].name} (${teamArr.length}/${maxLimit})${isFull ? ' [마감]' : ''}</option>`;
+                        }).join('')}
+                      </select>
+                    </div>
+                  ` : ''}
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
+      } else {
+        bSec.classList.add('hidden');
+      }
+
+      if(absentPlayers.length > 0) {
+        aSec.classList.remove('hidden'); document.getElementById('absentCount').textContent = `${absentPlayers.length}명`;
+        document.getElementById('absentList').innerHTML = absentPlayers.map((p) => {
+          const nameColorCls = p.isGuest ? 'text-amber-600 dark:text-amber-400' : 'text-rose-900 dark:text-rose-300';
+          return `
+            <div class="px-3 py-2 border rounded-xl flex justify-between items-center gap-2 bg-rose-50/50 dark:bg-black dark:border-rose-900/50 text-xs">
+              <div class="flex gap-1.5 items-center min-w-0 flex-1">
+                <span class="text-[10px] text-rose-500 font-bold shrink-0">${p.pos}</span>
+                <span class="text-[10px] font-bold text-rose-500 shrink-0">${p.ageGroup || '95'}</span>
+                <span class="font-bold truncate ${nameColorCls}">${p.name}</span>
+              </div>
+              <div class="flex items-center gap-1.5 shrink-0">
+                ${isSubAdminRole() ? `
+                  <select onchange="changeAbsentAttendance('${p.id}', this.value)" class="text-[10px] bg-transparent dark:bg-black font-bold border border-rose-300 dark:border-rose-800 rounded px-2 py-0.5 outline-none text-emerald-600">
+                    <option value="absent" selected>🔴 불참</option>
+                    <option value="present">🟢 참석</option>
+                  </select>
+                ` : ''}
+              </div>
+            </div>
+          `;
+        }).join('');
+      } else {
+        aSec.classList.add('hidden');
+      }
+    }
+
+    function saveDailyAttendance() {
+      if (!isSubAdminRole()) return;
+      const dateInput = document.getElementById('attendanceSaveDate');
+      const dateStr = (dateInput && dateInput.value) || getTodayDateString();
+      if (!dateStr) {
+        showToast('저장할 날짜를 선택해주세요.', 'error');
+        return;
+      }
+      if (players.length === 0) {
+        showToast('저장할 선수 명단이 없습니다.', 'error');
+        return;
+      }
+
+      const parts = dateStr.split('-');
+      const year = Number(parts[0]);
+      const month = Number(parts[1]);
+      const day = Number(parts[2]);
+      const normalizedDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const nowStr = new Date().toLocaleString('ko-KR');
+
+      const recordsToSave = players.map(p => ({
+        year,
+        month,
+        day,
+        date: normalizedDate,
+        id: p.id,
+        name: p.name,
+        isGuest: Boolean(p.isGuest),
+        pos: p.pos,
+        ageGroup: p.ageGroup || '95',
+        attendance: p.attendance === 'absent' ? 'absent' : 'present',
+        savedAt: nowStr
+      }));
+
+      attendanceLogs = attendanceLogs.filter(r => r.date !== normalizedDate).concat(recordsToSave);
+      saveToLocal();
+      initAttendanceFilterOptions(year, month, day);
+      renderAttendanceView();
+
+      if (isGasEnv) {
+        const btn = document.getElementById('saveAttendanceBtn');
+        if (btn) btn.disabled = true;
+        google.script.run
+          .withSuccessHandler((res) => {
+            if (btn) btn.disabled = false;
+            if (res && res.ok) {
+              showToast(`${normalizedDate} 출석 기록(${res.count}명)이 구글 시트에 저장되었습니다.`, 'success');
+              fetchAttendanceLogs(false);
+            } else {
+              showToast('구글 시트 출석 저장에 실패했습니다.', 'error');
+            }
+          })
+          .withFailureHandler(() => {
+            if (btn) btn.disabled = false;
+            showToast('구글 시트 연결 오류가 발생했습니다.', 'error');
+          })
+          .saveAttendanceRecord(normalizedDate, recordsToSave);
+      } else {
+        showToast(`${normalizedDate} 출석 기록(${recordsToSave.length}명)이 저장되었습니다.`, 'success');
+      }
+    }
+
+    function fetchAttendanceLogs(showFeedback) {
+      if (!isGasEnv) {
+        initAttendanceFilterOptions();
+        renderAttendanceView();
+        return;
+      }
+
+      google.script.run
+        .withSuccessHandler((res) => {
+          if (res && res.ok && Array.isArray(res.records)) {
+            attendanceLogs = res.records;
+            saveToLocal();
+            initAttendanceFilterOptions();
+            renderAttendanceView();
+            if (showFeedback) {
+              showToast('구글 시트에서 출석 기록을 불러왔습니다.', 'success');
+            }
+          }
+        })
+        .withFailureHandler(() => {
+          if (showFeedback) {
+            showToast('출석 기록 불러오기에 실패했습니다.', 'error');
+          }
+        })
+        .loadAttendanceRecords();
+    }
+
+    function initAttendanceFilterOptions(preferY, preferM, preferD) {
+      const ySel = document.getElementById('attFilterYear');
+      const mSel = document.getElementById('attFilterMonth');
+      const dSel = document.getElementById('attFilterDay');
+      if (!ySel || !mSel || !dSel) return;
+
+      const today = new Date();
+      const yearsSet = new Set([today.getFullYear()]);
+      attendanceLogs.forEach(r => { if (r.year) yearsSet.add(Number(r.year)); });
+
+      const sortedYears = Array.from(yearsSet).sort((a, b) => b - a);
+      const prevY = preferY || Number(ySel.value) || sortedYears[0];
+
+      ySel.innerHTML = sortedYears.map(y => `<option value="${y}">${y}년</option>`).join('');
+      ySel.value = sortedYears.includes(prevY) ? String(prevY) : String(sortedYears[0]);
+
+      populateMonthOptions(preferM, preferD);
+    }
+
+    function populateMonthOptions(preferM, preferD) {
+      const ySel = document.getElementById('attFilterYear');
+      const mSel = document.getElementById('attFilterMonth');
+      const selYear = Number(ySel.value);
+
+      const monthsInLogs = new Set();
+      attendanceLogs.forEach(r => {
+        if (Number(r.year) === selYear && r.month) monthsInLogs.add(Number(r.month));
+      });
+
+      const prevM = preferM || Number(mSel.value);
+      const allMonths = Array.from({ length: 12 }, (_, i) => i + 1);
+
+      mSel.innerHTML = allMonths.map(m => {
+        const hasData = monthsInLogs.has(m);
+        return `<option value="${m}">${m}월${hasData ? ' ●' : ''}</option>`;
+      }).join('');
+
+      if (prevM && prevM >= 1 && prevM <= 12) {
+        mSel.value = String(prevM);
+      } else if (monthsInLogs.size > 0) {
+        const latestM = Math.max(...Array.from(monthsInLogs));
+        mSel.value = String(latestM);
+      } else {
+        mSel.value = String(new Date().getMonth() + 1);
+      }
+
+      populateDayOptions(preferD);
+    }
+
+    function populateDayOptions(preferD) {
+      const ySel = document.getElementById('attFilterYear');
+      const mSel = document.getElementById('attFilterMonth');
+      const dSel = document.getElementById('attFilterDay');
+
+      const selYear = Number(ySel.value);
+      const selMonth = Number(mSel.value);
+      const daysInMonth = new Date(selYear, selMonth, 0).getDate();
+
+      const daysInLogs = new Set();
+      attendanceLogs.forEach(r => {
+        if (Number(r.year) === selYear && Number(r.month) === selMonth && r.day) {
+          daysInLogs.add(Number(r.day));
+        }
+      });
+
+      const prevD = preferD || Number(dSel.value);
+      const allDays = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+
+      dSel.innerHTML = allDays.map(d => {
+        const hasData = daysInLogs.has(d);
+        return `<option value="${d}">${d}일${hasData ? ' ●' : ''}</option>`;
+      }).join('');
+
+      if (prevD && prevD >= 1 && prevD <= daysInMonth) {
+        dSel.value = String(prevD);
+      } else if (daysInLogs.size > 0) {
+        const latestD = Math.max(...Array.from(daysInLogs));
+        dSel.value = String(latestD);
+      } else {
+        const today = new Date();
+        const defD = (today.getFullYear() === selYear && (today.getMonth() + 1) === selMonth) ? today.getDate() : 1;
+        dSel.value = String(defD);
+      }
+    }
+
+    function onAttYearChange() {
+      populateMonthOptions();
+      renderAttendanceView();
+    }
+
+    function onAttMonthChange() {
+      populateDayOptions();
+      renderAttendanceView();
+    }
+
+    function renderAttendanceView() {
+      const ySel = document.getElementById('attFilterYear');
+      const mSel = document.getElementById('attFilterMonth');
+      const dSel = document.getElementById('attFilterDay');
+      const sumBar = document.getElementById('attSummaryBar');
+      const detailCont = document.getElementById('attDetailContainer');
+      const emptyState = document.getElementById('emptyAttendanceState');
+      const savedAtBadge = document.getElementById('attendanceSavedAtBadge');
+
+      if (!ySel || !mSel || !dSel) return;
+
+      const y = Number(ySel.value);
+      const m = Number(mSel.value);
+      const d = Number(dSel.value);
+      const targetDate = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+
+      const matched = attendanceLogs.filter(r => r.date === targetDate);
+
+      if (matched.length === 0) {
+        sumBar.classList.add('hidden');
+        detailCont.classList.add('hidden');
+        emptyState.classList.remove('hidden');
+        emptyState.innerHTML = `<p class="text-xs sm:text-sm text-slate-400">${y}년 ${m}월 ${d}일에 저장된 출석 기록이 없습니다.</p>`;
+        if (savedAtBadge) savedAtBadge.textContent = '';
+        return;
+      }
+
+      emptyState.classList.add('hidden');
+      sumBar.classList.remove('hidden');
+      detailCont.classList.remove('hidden');
+
+      const presentList = matched.filter(r => r.attendance !== 'absent');
+      const absentList = matched.filter(r => r.attendance === 'absent');
+
+      document.getElementById('attSumTotal').textContent = `${matched.length}명`;
+      document.getElementById('attSumPresent').textContent = `${presentList.length}명`;
+      document.getElementById('attSumAbsent').textContent = `${absentList.length}명`;
+      document.getElementById('attPresentListCount').textContent = `${presentList.length}명`;
+      document.getElementById('attAbsentListCount').textContent = `${absentList.length}명`;
+
+      if (savedAtBadge) {
+        const lastSaved = matched[matched.length - 1].savedAt;
+        savedAtBadge.textContent = lastSaved ? `저장: ${lastSaved}` : '';
+      }
+
+      const renderChip = (r, isPresent) => {
+        const posObj = POS[r.pos] || POS.AM;
+        const nameCls = r.isGuest
+          ? 'text-amber-600 dark:text-amber-400'
+          : (isPresent ? 'text-slate-800 dark:text-slate-100' : 'text-rose-900 dark:text-rose-300');
+        return `
+          <div class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white dark:bg-black border border-slate-200 dark:border-neutral-800 text-xs shadow-sm">
+            <span class="px-1.5 py-0.2 rounded text-[10px] font-bold ${posObj.color}">${r.pos}</span>
+            <span class="text-[10px] font-bold text-slate-400">${r.ageGroup || '95'}</span>
+            <span class="font-bold ${nameCls}">${r.name}</span>
+          </div>
+        `;
+      };
+
+      document.getElementById('attPresentList').innerHTML = presentList.length > 0
+        ? presentList.map(r => renderChip(r, true)).join('')
+        : `<p class="text-xs text-slate-400">참석 인원이 없습니다.</p>`;
+
+      document.getElementById('attAbsentList').innerHTML = absentList.length > 0
+        ? absentList.map(r => renderChip(r, false)).join('')
+        : `<p class="text-xs text-slate-400">불참 인원이 없습니다.</p>`;
+    }
+
+    function copyTeams() {
+      const lines = [`🏀 AMBIGUOUS MATCH 팀 편성`, `──────────────────`];
+      generatedTeams.forEach((t, i) => {
+        if(t.length===0) return;
+        const style = TEAM_STYLES[i % TEAM_STYLES.length];
+        lines.push(`\n🔥 ${style.name} (${t.length}명)`);
+        t.forEach((p, j) => lines.push(`  ${j+1}. [${p.pos}] ${p.ageGroup || '95'} ${p.name}${p.isGuest ? ' (게스트)' : ''}`));
+      });
+      if(benchPlayers.length > 0) {
+        lines.push(`\n🪑 대기 명단 (${benchPlayers.length}명)`);
+        benchPlayers.forEach((p) => lines.push(`  - [${p.pos}] ${p.ageGroup || '95'} ${p.name}${p.isGuest ? ' (게스트)' : ''}`));
+      }
+      if(absentPlayers.length > 0) {
+        lines.push(`\n🔴 불참 명단 (${absentPlayers.length}명)`);
+        absentPlayers.forEach((p) => lines.push(`  - [${p.pos}] ${p.ageGroup || '95'} ${p.name}${p.isGuest ? ' (게스트)' : ''}`));
+      }
+      
+      const txt = document.createElement('textarea');
+      txt.value = lines.join('\n');
+      document.body.appendChild(txt);
+      txt.select();
+      document.execCommand('copy');
+      document.body.removeChild(txt);
+      showToast('카톡 결과 복사완료', 'success');
+    }
+  </script>
+</body>
+</html>
